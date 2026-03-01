@@ -33,5 +33,28 @@ bool Process::Attach(const char* processName)
 
     this->hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
 
+    m_pid = pid;
+    m_processName = processName;
+
+
     return (this->hProcess != NULL);
+}
+
+void Process::Detach() {
+    if (hProcess) {
+        CloseHandle(hProcess);
+        hProcess = NULL;
+    }
+
+    m_pid = 0;
+}
+
+bool Process::IsAlive() const {
+    if (!hProcess) return false;
+
+    DWORD code = 0;
+    if (!GetExitCodeProcess(hProcess, &code)) return false;
+
+    return code == STILL_ACTIVE;
+
 }

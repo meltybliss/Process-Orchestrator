@@ -4,6 +4,7 @@
 
 struct ScanResult {
 	uintptr_t addr;
+	unsigned char prevValue[8];
 	unsigned char lastValue[8];//8bytes
 };
 
