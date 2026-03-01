@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="packages\keystoneengine.0.9.2\build\native\keystoneengine.props" Condition="Exists('packages\keystoneengine.0.9.2\build\native\keystoneengine.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -163,6 +164,18 @@
   <ItemGroup>
     <Text Include="external\imgui\FontAwsome_LICENSE.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\keystoneengine.0.9.2\build\native\keystoneengine.targets" Condition="Exists('packages\keystoneengine.0.9.2\build\native\keystoneengine.targets')" />
+  </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>このプロジェクトは、このコンピューター上にない NuGet パッケージを参照しています。それらのパッケージをダウンロードするには、[NuGet パッケージの復元] を使用します。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイルは {0} です。</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\keystoneengine.0.9.2\build\native\keystoneengine.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\keystoneengine.0.9.2\build\native\keystoneengine.props'))" />
+    <Error Condition="!Exists('packages\keystoneengine.0.9.2\build\native\keystoneengine.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\keystoneengine.0.9.2\build\native\keystoneengine.targets'))" />
+  </Target>
 </Project>

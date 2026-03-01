@@ -4,6 +4,7 @@
 #include "mainUI.h"
 #include "Process.h"
 #include "Scanner.h"
+#include "Injector.h"
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx11.h"
 #include <d3d11.h>
@@ -117,6 +118,7 @@ int main() {
     MainUI ui;
     Scanner scanner;
     Process proc;
+    ManualInjector injector;
 
     bool done = false;
     while (!done) {
@@ -134,7 +136,7 @@ int main() {
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        ui.draw(scanner, proc);
+        ui.draw(scanner, proc, injector);
 
         // ƒŒƒ“ƒ_ƒŠƒ“ƒO
         ImGui::Render();
