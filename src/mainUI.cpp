@@ -99,6 +99,75 @@ void MainUI::draw(Scanner& scanner, Process& proc)
     static bool prevFreeze = false;
 
 
+    auto displayValue = [&](const unsigned char* data) {
+        if (!data) return;
+        switch (selectedType) {
+            case 0: {
+                int8_t v;
+                std::memcpy(&v, data, sizeof(v));
+                ImGui::Text("%d", v);
+                break;
+            }
+            case 1: {
+                int16_t v;
+                std::memcpy(&v, data, sizeof(v));
+                ImGui::Text("%d", v);
+                break;
+            }
+            case 2: {
+                int32_t v;
+                std::memcpy(&v, data, sizeof(v));
+                ImGui::Text("%d", v);
+                break;
+            }
+            case 3: {
+                int64_t v;
+                std::memcpy(&v, data, sizeof(v));
+                ImGui::Text("%lld", v);
+                break;
+            }
+            case 4: {
+                float v;
+                std::memcpy(&v, data, sizeof(v));
+                ImGui::Text("%.3f", v);
+                break;
+            }
+            case 5: {
+                double v;
+                std::memcpy(&v, data, sizeof(v));
+                ImGui::Text("%.6f", v);
+                break;
+            }
+            default: ImGui::Text("Unknown"); break;
+        }
+    };
+
+    /**auto getDelta = [&](const unsigned char* cur, const unsigned char* prev) -> double {
+        if (!cur || !prev) return 0.0f;
+        switch (selectedType) {
+            case 0: return (double)(*(int8_t*)cur - *(int8_t*)prev);
+            case 1: return (double)(*(int16_t*)cur - *(int16_t*)prev);
+            case 2: return (double)(*(int32_t*)cur - *(int32_t*)prev);
+            case 3: return (double)(*(int64_t*)cur - *(int64_t*)prev);
+            case 4: return (double)(*(float*)cur - *(float*)prev);
+            case 5: return (double)(*(double*)cur - *(double*)prev);
+            default: return 0.0;
+        }
+    };*/
+    auto getDelta = [&](const unsigned char* cur, const unsigned char* prev) -> double {
+        if (!cur || !prev) return 0.0f;
+        switch (selectedType) {//Scanner::Load8 でstatic関数呼ぶ
+            case 0: return (double)(Scanner::Load8<int8_t>(cur) - Scanner::Load8<int8_t>(prev));
+            case 1: return (double)(Scanner::Load8<int16_t>(cur) - Scanner::Load8<int16_t>(prev));
+            case 2: return (double)(Scanner::Load8<int32_t>(cur) - Scanner::Load8<int32_t>(prev));
+            case 3: return (double)(Scanner::Load8<int64_t>(cur) - Scanner::Load8<int64_t>(prev));
+            case 4: return (double)(Scanner::Load8<float>(cur) - Scanner::Load8<float>(prev));
+            case 5: return (Scanner::Load8<double>(cur) - Scanner::Load8<double>(prev));
+            default: return 0.0;
+        }
+    };
+    
+
     static bool AppliedTheme = false;
     if (!AppliedTheme) {
         ApplyProTheme();
@@ -135,7 +204,11 @@ void MainUI::draw(Scanner& scanner, Process& proc)
         frozen.clear();
         frozen.reserve(scanner.getResults());
         for (size_t i = 0; i < scanner.getResults(); ++i) {
-            frozen.push_back(scanner.getTareget(i)); // 値コピー
+
+            if (const ScanResult* p = scanner.getTaregetPtr(i)) {
+                frozen.push_back(*p); // 値コピー
+            }
+            
         }
     }
 
@@ -260,7 +333,7 @@ void MainUI::draw(Scanner& scanner, Process& proc)
             int tmp = (int)writeValue;
             if (ImGui::InputInt("##quick_write", &tmp)) writeValue = (double)tmp;
         }
-        ImGui::TextDisabled("Right-click a row to write this.");
+        ImGui::TextDisabled("Double Left-click a row to write this!!!");
 
         ImGui::Spacing();
 
@@ -314,8 +387,8 @@ void MainUI::draw(Scanner& scanner, Process& proc)
 
             const int n = freezeResults ? (int)frozen.size() : (int)scanner.getResults();
 
-            auto getRow = [&](int i) -> const ScanResult& {
-                return freezeResults ? frozen[(size_t)i] : scanner.getTareget((size_t)i);
+            auto getRow = [&](int i) -> const ScanResult* {
+                return freezeResults ? &frozen[(size_t)i] : scanner.getTaregetPtr((size_t)i);
             };
 
             clipper.Begin(n);
@@ -325,7 +398,9 @@ void MainUI::draw(Scanner& scanner, Process& proc)
                 for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
                     if (shown >= shownLimit) break;
 
-                    const auto& r = getRow(i);
+                    const auto* rp = getRow(i);
+                    if (!rp) continue;
+                    const auto& r = *rp;
 
                     // フィルタ（簡易：アドレスをhex文字列化して部分一致）
                     if (addrFilter[0] != '\0') {
@@ -346,31 +421,42 @@ void MainUI::draw(Scanner& scanner, Process& proc)
                         selectedRow = i;
                     }
 
-                    if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+                    if (ImGui::IsItemHovered()) {
                         selectedRow = i;
 
-                        if (proc.IsAttached() && proc.IsAlive()) {
-                            switch (selectedType) {
+                        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                            if (proc.IsAttached() && proc.IsAlive()) {
+                                switch (selectedType) {
                                 case 0: proc.Write<int8_t>(r.addr, (int8_t)writeValue); break;
                                 case 1: proc.Write<int16_t>(r.addr, (int16_t)writeValue); break;
                                 case 2: proc.Write<int32_t>(r.addr, (int32_t)writeValue); break;
                                 case 3: proc.Write<int64_t>(r.addr, (int64_t)writeValue); break;
                                 case 4: proc.Write<float>(r.addr, (float)writeValue); break;
                                 case 5: proc.Write<double>(r.addr, (double)writeValue); break;
+                                }
                             }
                         }
                     }
 
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::Text("%.6f", *(double*)r.lastValue);
+                    displayValue(r.lastValue);
 
                     ImGui::TableSetColumnIndex(2);
-                    ImGui::Text("%.6f", *(double*)r.prevValue);
+                    displayValue(r.prevValue);
 
                     ImGui::TableSetColumnIndex(3);
-                    double v = *(double*)r.lastValue;
-                    double p = *(double*)r.prevValue;
-                    ImGui::Text("%.6f", v - p);
+                    double delta = getDelta(r.lastValue, r.prevValue);
+                    
+                    if (delta > 0) {
+                        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "+%.2f", delta);
+                    }
+                    else if (delta < 0) {
+                        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "%.2f", delta);
+                    }
+                    else {
+                        ImGui::TextDisabled("0.00");
+                    }
+
 
                     ++shown;
                 }
@@ -382,9 +468,7 @@ void MainUI::draw(Scanner& scanner, Process& proc)
         
     }
 
-    
-
-
+   
     ImGui::EndChild();
     ImGui::End();
 }
