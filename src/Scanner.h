@@ -30,6 +30,7 @@ public:
 						if (value == targetVal) {
 							ScanResult result;
 							result.addr = (uintptr_t)mbi.BaseAddress + i;
+
 							*(T*)result.lastValue = value;
 
 							pool.write(result);
@@ -56,8 +57,9 @@ public:
 		while (readPtr < endPtr) {
 			T curVal;
 
-			if (proc.Read(readPtr->addr, curVal)) {
+			if (proc.Read(readPtr->addr, &curVal)) {
 				if (curVal == targetVal) {
+					*(T*)readPtr->prevValue = *(T*)readPtr->lastValue;
 					*(T*)readPtr->lastValue = curVal;
 					*writePtr = *readPtr;
 					writePtr++;
@@ -69,6 +71,14 @@ public:
 		}
 
 		pool.offset = (size_t)(writePtr - pool.targetBasePtr);//ポインタ同士を引き算すると、バイト数ではなく**「その型（ScanResult）が何個分入るか
+	}
+
+	size_t getResults() {
+		return pool.offset;
+	}
+
+	ScanResult getTareget(size_t index) const {
+		return pool.get(index);
 	}
 
 private:
