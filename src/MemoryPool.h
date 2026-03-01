@@ -11,7 +11,7 @@ struct ScanResult {
 class MemoryPool {
 public:
 	ScanResult* targetBasePtr;//senntou
-	size_t offset;//tugino kakikomiiti.nannkome ka
+	size_t offset;//tugino kakikomiiti.何個入ってるか（件数）
 	size_t capacity;//gennzaino youryou
 
 	MemoryPool(size_t initialSize) {
@@ -32,13 +32,6 @@ public:
 		}
 	}
 
-	ScanResult get(size_t index) const {
-		if (index < offset) {
-			return targetBasePtr[index];//or it also can be *(targetBasePtr + index)
-		}
-
-		return {};
-	}
 
 	ScanResult* getPtr (size_t index) const {
 		if (index < offset) {
@@ -56,7 +49,7 @@ public:
 		//型のサイズ × 数値分だけジャンプ.だからoffsetが1でも8子分進む
 		*(targetBasePtr + offset) = result;//targetBasePtr[offset] =  mo kanou.
 
-		offset += 1;
+		offset++;
 
 	}
 
