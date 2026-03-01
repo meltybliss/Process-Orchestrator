@@ -62,6 +62,39 @@ bool ManualInjector::InjectAndExecute(Process& proc, const std::vector<unsigned 
 	return true;
 }
 
+bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
+{
+	// 1. DLLファイルをバイナリとして読み込む
+	std::ifstream file(dllPath, std::ios::binary | std::ios::ate);//ate mode
+	if (file.fail()) return false;
+
+	size_t fileSize = file.tellg();
+	std::vector<uint8_t> rawData(fileSize);
+	file.seekg(0, std::ios::beg);
+	file.read((char*)rawData.data(), fileSize);
+	file.close();
+
+	// 2. PEヘッダーの確認（これが正しいDLLファイルかチェック）
+	auto* dosHeader = (PIMAGE_DOS_HEADER)rawData.data();
+	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE) return false;
+
+	auto* ntHeader = (PIMAGE_NT_HEADERS)(rawData.data() + dosHeader->e_lfanew);
+	if (ntHeader->Signature != IMAGE_NT_SIGNATURE) return false;
+
+	// 3. ターゲットプロセス内にメモリを確保
+	// DLLが要求するサイズ分（SizeOfImage）を確保する
+	void* targetBase = VirtualAllocEx(proc.hProcess, nullptr,
+		ntHeader->OptionalHeader.SizeOfImage, 
+		MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+
+	if (!targetBase) return false;
+
+	// --- ここから先の処理（再配置やインポート解決）はさらに複雑になります ---
+
+	return true;
+
+}
+
 void ManualInjector::ReportError(const char* msg)
 {
 	std::cerr << "[Injector Error] " << msg << " | Code: " << GetLastError() << "\n";
