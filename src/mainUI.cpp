@@ -91,6 +91,13 @@ void MainUI::draw(Scanner& scanner, Process& proc)
     static int shownLimit = 5000;
     static int selectedRow = -1;
     static double lastScanMs = 0.0;
+    static double writeValue = 0.0;
+    static bool lockSelection = false; // optional
+
+
+    static std::vector<ScanResult> frozen;
+    static bool prevFreeze = false;
+
 
     static bool AppliedTheme = false;
     if (!AppliedTheme) {
@@ -123,6 +130,21 @@ void MainUI::draw(Scanner& scanner, Process& proc)
         ImGui::Checkbox("Freeze", &freezeResults);
     }
     ImGui::Separator();
+
+    if (freezeResults && !prevFreeze) {
+        frozen.clear();
+        frozen.reserve(scanner.getResults());
+        for (size_t i = 0; i < scanner.getResults(); ++i) {
+            frozen.push_back(scanner.getTareget(i)); // 値コピー
+        }
+    }
+
+    if (!freezeResults && prevFreeze) {
+        frozen.clear();
+        frozen.shrink_to_fit();
+    }
+
+    prevFreeze = freezeResults;
 
     // --- remaining region split ---
     ImVec2 content = ImGui::GetContentRegionAvail();
@@ -212,11 +234,33 @@ void MainUI::draw(Scanner& scanner, Process& proc)
             }
             lastScanMs = (ImGui::GetTime() - t0) * 1000.0;
         }
+        
 
         /*if (ImGui::Button("Reset Results", ImVec2(-1, 28))) {
             scanner.clearResults();
             selectedRow = -1;
         }*/
+
+
+        ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
+        ImGui::Text("Quick Write Value");
+        ImGui::PopStyleColor();
+        ImGui::Separator();
+
+        ImGui::SetNextItemWidth(-1);
+        if (selectedType == 4) {
+            float tmp = (float)writeValue;
+            if (ImGui::InputFloat("##quick_write", &tmp)) writeValue = tmp;
+        }
+        else if (selectedType == 5) {
+            ImGui::InputDouble("##quick_write", &writeValue);
+        }
+        else {
+            int tmp = (int)writeValue;
+            if (ImGui::InputInt("##quick_write", &tmp)) writeValue = (double)tmp;
+        }
+        ImGui::TextDisabled("Right-click a row to write this.");
 
         ImGui::Spacing();
 
@@ -267,8 +311,12 @@ void MainUI::draw(Scanner& scanner, Process& proc)
             // 高速化の定番：クリップ
             ImGuiListClipper clipper;
 
-           
-            const int n = (int)scanner.getResults();
+
+            const int n = freezeResults ? (int)frozen.size() : (int)scanner.getResults();
+
+            auto getRow = [&](int i) -> const ScanResult& {
+                return freezeResults ? frozen[(size_t)i] : scanner.getTareget((size_t)i);
+            };
 
             clipper.Begin(n);
             int shown = 0;
@@ -277,7 +325,7 @@ void MainUI::draw(Scanner& scanner, Process& proc)
                 for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
                     if (shown >= shownLimit) break;
 
-                    const auto& r = scanner.getTareget((size_t)i);
+                    const auto& r = getRow(i);
 
                     // フィルタ（簡易：アドレスをhex文字列化して部分一致）
                     if (addrFilter[0] != '\0') {
@@ -296,6 +344,21 @@ void MainUI::draw(Scanner& scanner, Process& proc)
 
                     if (ImGui::Selectable(addrStr, isSelected, ImGuiSelectableFlags_SpanAllColumns)) {
                         selectedRow = i;
+                    }
+
+                    if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+                        selectedRow = i;
+
+                        if (proc.IsAttached() && proc.IsAlive()) {
+                            switch (selectedType) {
+                                case 0: proc.Write<int8_t>(r.addr, (int8_t)writeValue); break;
+                                case 1: proc.Write<int16_t>(r.addr, (int16_t)writeValue); break;
+                                case 2: proc.Write<int32_t>(r.addr, (int32_t)writeValue); break;
+                                case 3: proc.Write<int64_t>(r.addr, (int64_t)writeValue); break;
+                                case 4: proc.Write<float>(r.addr, (float)writeValue); break;
+                                case 5: proc.Write<double>(r.addr, (double)writeValue); break;
+                            }
+                        }
                     }
 
                     ImGui::TableSetColumnIndex(1);
@@ -318,6 +381,10 @@ void MainUI::draw(Scanner& scanner, Process& proc)
 
         
     }
+
+    
+
+
     ImGui::EndChild();
     ImGui::End();
 }

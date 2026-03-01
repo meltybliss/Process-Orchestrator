@@ -16,9 +16,15 @@ public:
 		return ReadProcessMemory(this->hProcess, (LPCVOID)address, buffer, sizeof(T), NULL);
 	}
 
+	template<typename T>
+	bool Write(uintptr_t address, const T& val) {
+		return WriteProcessMemory(this->hProcess, (LPVOID)address, &val, sizeof(T), nullptr) != 0;
+	}
+
 	DWORD pid() { return m_pid; }
 
 	bool IsAttached() { return hProcess != NULL; }
+
 
 	bool IsAlive() const;
 
