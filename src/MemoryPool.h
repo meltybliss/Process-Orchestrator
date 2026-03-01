@@ -2,16 +2,21 @@
 #include <vector>
 #include <cstdint>
 
+struct ScanResult {
+	uintptr_t addr;
+	unsigned char lastValue[8];//8bytes
+};
+
 class MemoryPool {
 public:
-	uintptr_t* targetBasePtr;//senntou
+	ScanResult* targetBasePtr;//senntou
 	size_t offset;//tugino kakikomiiti.nannkome ka
 	size_t capacity;//gennzaino youryou
 
 	MemoryPool(size_t initialSize) {
 		capacity = initialSize;
 
-		targetBasePtr = (uintptr_t*)malloc(sizeof(uintptr_t) * capacity);
+		targetBasePtr = (ScanResult*)malloc(sizeof(ScanResult) * capacity);
 		if (targetBasePtr == nullptr) {
 			capacity = 0;
 		}
@@ -26,15 +31,15 @@ public:
 		}
 	}
 
-	uintptr_t get(size_t index) const {
+	ScanResult get(size_t index) const {
 		if (index < offset) {
 			return targetBasePtr[index];//or it also can be *(targetBasePtr + index)
 		}
 
-		return 0;
+		return {};
 	}
 
-	uintptr_t* getPtr (size_t index) const {
+	ScanResult* getPtr (size_t index) const {
 		if (index < offset) {
 			return targetBasePtr + index;//or it also can be &targetBasePtr[index];
 		}
@@ -42,13 +47,13 @@ public:
 		return nullptr;
 	}
 
-	void write(uintptr_t target) {
+	void write(ScanResult result) {
 		if (offset >= capacity) {
 			grow();
 		}
 
 		//型のサイズ × 数値分だけジャンプ.だからoffsetが1でも8子分進む
-		*(targetBasePtr + offset) = target;//targetBasePtr[offset] = target mo kanou.
+		*(targetBasePtr + offset) = result;//targetBasePtr[offset] =  mo kanou.
 
 		offset += 1;
 
@@ -56,7 +61,7 @@ public:
 
 	void grow() {
 		size_t newCap = this->capacity * 2;
-		uintptr_t* tmp = (uintptr_t*)realloc(targetBasePtr, sizeof(uintptr_t) * newCap);
+		ScanResult* tmp = (ScanResult*)realloc(targetBasePtr, sizeof(ScanResult) * newCap);
 
 		if (tmp != nullptr) {
 			targetBasePtr = tmp;
