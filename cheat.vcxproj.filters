@@ -99,4 +99,7 @@
   <ItemGroup>
     <Text Include="external\imgui\FontAwsome_LICENSE.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
 </Project>

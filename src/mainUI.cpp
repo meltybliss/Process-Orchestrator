@@ -1,4 +1,6 @@
 #include "mainUI.h"
+#include <keystone/keystone.h>
+
 
 static void ApplyProTheme()
 {
@@ -84,7 +86,7 @@ MainUI::MainUI()
 {
 	
 }
-void MainUI::draw(Scanner& scanner, Process& proc)
+void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
 {
     static bool freezeResults = false;
     static char addrFilter[64] = "";      // "0x7FF..." とか "7FF" でもOK
@@ -97,6 +99,9 @@ void MainUI::draw(Scanner& scanner, Process& proc)
 
     static std::vector<ScanResult> frozen;
     static bool prevFreeze = false;
+
+    static char asmBuffer[4096] = ""; // インジェクション用
+
 
 
     auto displayValue = [&](const unsigned char* data) {
@@ -187,288 +192,264 @@ void MainUI::draw(Scanner& scanner, Process& proc)
 
     ImGui::Begin("Main UI", nullptr, wf);
 
-    // --- top bar ---
+    if (ImGui::BeginTabBar("MainTabs", ImGuiTabBarFlags_None))
     {
-        const size_t rc = scanner.getResults();
-        ImGui::Text("PID: %d", proc.pid());
-        ImGui::SameLine();
-        ImGui::Text("| Results: %zu", rc);
-        ImGui::SameLine();
-        ImGui::Text("| Last: %.2f ms", lastScanMs);
-        ImGui::SameLine();
-        ImGui::Checkbox("Freeze", &freezeResults);
-    }
-    ImGui::Separator();
-
-    if (freezeResults && !prevFreeze) {
-        frozen.clear();
-        frozen.reserve(scanner.getResults());
-        for (size_t i = 0; i < scanner.getResults(); ++i) {
-
-            if (const ScanResult* p = scanner.getTaregetPtr(i)) {
-                frozen.push_back(*p); // 値コピー
+        // ---------------- TAB 1: SCANNER ----------------
+        if (ImGui::BeginTabItem("Memory Scanner"))
+        {
+            // Info Bar
+            {
+                const size_t rc = scanner.getResults();
+                ImGui::Text("PID: %d | Results: %zu | Last: %.2f ms", proc.pid(), rc, lastScanMs);
+                ImGui::SameLine();
+                ImGui::Checkbox("Freeze", &freezeResults);
             }
-            
-        }
-    }
+            ImGui::Separator();
 
-    if (!freezeResults && prevFreeze) {
-        frozen.clear();
-        frozen.shrink_to_fit();
-    }
-
-    prevFreeze = freezeResults;
-
-    // --- remaining region split ---
-    ImVec2 content = ImGui::GetContentRegionAvail();
-    float leftW = 320.0f;
-
-
-
-    // ====== 左右ペイン ======
-    ImGui::BeginChild("LeftPane", ImVec2(leftW, content.y), true);
-    {
-        static char procName[128] = "mygame.exe";//128まで
-        static bool attached = false;
-
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
-        ImGui::TextUnformatted("Process");
-        ImGui::PopStyleColor();
-        ImGui::Separator();
-
-        ImGui::SetNextItemWidth(-1);
-        ImGui::InputText("##proc", procName, IM_ARRAYSIZE(procName));
-        ImGui::SameLine();
-        ImGui::TextDisabled("exe name");
-
-        if (!proc.IsAttached()) {
-            if (ImGui::Button("Attach", ImVec2(-1, 28))) {
-                attached = proc.Attach(procName);
-            }
-        }
-        else {
-            if (ImGui::Button("Detach", ImVec2(-1, 28))) {
-                proc.Detach();
-            }
-        }
-
-        ImGui::Text("Status: %s", proc.IsAttached() ? (proc.IsAlive() ? "Attached" : "Dead") : "Not attached");
-        ImGui::Text("PID: %lu", (unsigned long)proc.pid());
-        ImGui::Spacing();
-
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
-        ImGui::Text("Search");
-        ImGui::PopStyleColor();
-        ImGui::Separator();
-
-        ImGui::SetNextItemWidth(-1);
-        ImGui::Combo("Type", &selectedType, types, IM_ARRAYSIZE(types));
-
-        // 入力（型に合わせて）
-        if (selectedType == 4) {
-            float temp = (float)inputVal;
-            if (ImGui::InputFloat("Value", &temp)) inputVal = (double)temp;
-        }
-        else if (selectedType == 5) {
-            ImGui::InputDouble("Value", &inputVal);
-        }
-        else {
-            int temp = (int)inputVal;
-            if (ImGui::InputInt("Value", &temp)) inputVal = (double)temp;
-        }
-
-        ImGui::Spacing();
-
-        // ボタン類（横並び）
-        if (ImGui::Button("First Scan", ImVec2(-1, 32))) {
-            const double t0 = ImGui::GetTime();
-            switch (selectedType) {
-            case 0: scanner.firstSearch(proc, (int8_t)inputVal); break;
-            case 1: scanner.firstSearch(proc, (int16_t)inputVal); break;
-            case 2: scanner.firstSearch(proc, (int32_t)inputVal); break;
-            case 3: scanner.firstSearch(proc, (int64_t)inputVal); break;
-            case 4: scanner.firstSearch(proc, (float)inputVal); break;
-            case 5: scanner.firstSearch(proc, (double)inputVal); break;
-            }
-            lastScanMs = (ImGui::GetTime() - t0) * 1000.0;
-            selectedRow = -1;
-        }
-
-        if (ImGui::Button("Next Scan", ImVec2(-1, 32))) {
-            const double t0 = ImGui::GetTime();
-            // ここはあなたのScanner APIに合わせて呼び出しを作る
-            switch (selectedType) {
-            case 0: scanner.nextSearch(proc, (int8_t)inputVal); break;
-            case 1: scanner.nextSearch(proc, (int16_t)inputVal); break;
-            case 2: scanner.nextSearch(proc, (int32_t)inputVal); break;
-            case 3: scanner.nextSearch(proc, (int64_t)inputVal); break;
-            case 4: scanner.nextSearch(proc, (float)inputVal); break;
-            case 5: scanner.nextSearch(proc, (double)inputVal); break;
-            }
-            lastScanMs = (ImGui::GetTime() - t0) * 1000.0;
-        }
-        
-
-        /*if (ImGui::Button("Reset Results", ImVec2(-1, 28))) {
-            scanner.clearResults();
-            selectedRow = -1;
-        }*/
-
-
-        ImGui::Spacing();
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
-        ImGui::Text("Quick Write Value");
-        ImGui::PopStyleColor();
-        ImGui::Separator();
-
-        ImGui::SetNextItemWidth(-1);
-        if (selectedType == 4) {
-            float tmp = (float)writeValue;
-            if (ImGui::InputFloat("##quick_write", &tmp)) writeValue = tmp;
-        }
-        else if (selectedType == 5) {
-            ImGui::InputDouble("##quick_write", &writeValue);
-        }
-        else {
-            int tmp = (int)writeValue;
-            if (ImGui::InputInt("##quick_write", &tmp)) writeValue = (double)tmp;
-        }
-        ImGui::TextDisabled("Double Left-click a row to write this!!!");
-
-        ImGui::Spacing();
-
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
-        ImGui::Text("Result View");
-        ImGui::PopStyleColor();
-
-        ImGui::Separator();
-
-        ImGui::SetNextItemWidth(-1);
-        ImGui::InputText("Addr filter", addrFilter, IM_ARRAYSIZE(addrFilter));
-
-        ImGui::SetNextItemWidth(-1);
-        ImGui::SliderInt("Show limit", &shownLimit, 100, 50000);
-
-    }
-
-    ImGui::EndChild();
-
-    ImGui::SameLine();
-
-    ImGui::BeginChild("RightPane", ImVec2(0, content.y), true);
-    {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
-        ImGui::Text("Results");
-        ImGui::PopStyleColor();
-        ImGui::Separator();
-
-        // 結果テーブル
-        ImGuiTableFlags flags =
-            ImGuiTableFlags_Resizable |
-            ImGuiTableFlags_Reorderable |
-            ImGuiTableFlags_Hideable |
-            ImGuiTableFlags_Sortable |
-            ImGuiTableFlags_RowBg |
-            ImGuiTableFlags_Borders |
-            ImGuiTableFlags_ScrollY;
-
-
-        ImVec2 avail = ImGui::GetContentRegionAvail();
-        if (ImGui::BeginTable("ResultsTable", 4, flags, avail)) {
-            ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_DefaultSort);
-            ImGui::TableSetupColumn("Value");
-            ImGui::TableSetupColumn("Prev");
-            ImGui::TableSetupColumn("Delta");
-            ImGui::TableHeadersRow();
-
-            // 高速化の定番：クリップ
-            ImGuiListClipper clipper;
-
-
-            const int n = freezeResults ? (int)frozen.size() : (int)scanner.getResults();
-
-            auto getRow = [&](int i) -> const ScanResult* {
-                return freezeResults ? &frozen[(size_t)i] : scanner.getTaregetPtr((size_t)i);
-            };
-
-            clipper.Begin(n);
-            int shown = 0;
-
-            while (clipper.Step()) {
-                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
-                    if (shown >= shownLimit) break;
-
-                    const auto* rp = getRow(i);
-                    if (!rp) continue;
-                    const auto& r = *rp;
-
-                    // フィルタ（簡易：アドレスをhex文字列化して部分一致）
-                    if (addrFilter[0] != '\0') {
-                        char buf[32];
-                        sprintf_s(buf, "0x%llX", (unsigned long long)r.addr);
-                        if (strstr(buf, addrFilter) == nullptr) continue;
-                    }
-
-                    ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
-
-                    // 行選択
-                    bool isSelected = (selectedRow == i);
-                    char addrStr[32];
-                    sprintf_s(addrStr, "0x%llX", (unsigned long long)r.addr);
-
-                    if (ImGui::Selectable(addrStr, isSelected, ImGuiSelectableFlags_SpanAllColumns)) {
-                        selectedRow = i;
-                    }
-
-                    if (ImGui::IsItemHovered()) {
-                        selectedRow = i;
-
-                        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-                            if (proc.IsAttached() && proc.IsAlive()) {
-                                switch (selectedType) {
-                                case 0: proc.Write<int8_t>(r.addr, (int8_t)writeValue); break;
-                                case 1: proc.Write<int16_t>(r.addr, (int16_t)writeValue); break;
-                                case 2: proc.Write<int32_t>(r.addr, (int32_t)writeValue); break;
-                                case 3: proc.Write<int64_t>(r.addr, (int64_t)writeValue); break;
-                                case 4: proc.Write<float>(r.addr, (float)writeValue); break;
-                                case 5: proc.Write<double>(r.addr, (double)writeValue); break;
-                                }
-                            }
-                        }
-                    }
-
-                    ImGui::TableSetColumnIndex(1);
-                    displayValue(r.lastValue);
-
-                    ImGui::TableSetColumnIndex(2);
-                    displayValue(r.prevValue);
-
-                    ImGui::TableSetColumnIndex(3);
-                    double delta = getDelta(r.lastValue, r.prevValue);
-                    
-                    if (delta > 0) {
-                        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "+%.2f", delta);
-                    }
-                    else if (delta < 0) {
-                        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "%.2f", delta);
-                    }
-                    else {
-                        ImGui::TextDisabled("0.00");
-                    }
-
-
-                    ++shown;
+            // Freeze Logic
+            if (freezeResults && !prevFreeze) {
+                frozen.clear();
+                frozen.reserve(scanner.getResults());
+                for (size_t i = 0; i < scanner.getResults(); ++i) {
+                    if (const ScanResult* p = scanner.getTaregetPtr(i)) frozen.push_back(*p);
                 }
             }
+            if (!freezeResults && prevFreeze) { frozen.clear(); frozen.shrink_to_fit(); }
+            prevFreeze = freezeResults;
 
-            ImGui::EndTable();
+            ImVec2 content = ImGui::GetContentRegionAvail();
+            float leftW = 320.0f;
+
+            // --- LEFT PANE (Controls) ---
+            ImGui::BeginChild("LeftPane", ImVec2(leftW, content.y), true);
+            {
+                static char procName[128] = "mygame.exe";
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
+                ImGui::TextUnformatted("Process");
+                ImGui::PopStyleColor();
+                ImGui::Separator();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::InputText("##proc", procName, IM_ARRAYSIZE(procName));
+                if (!proc.IsAttached()) {
+                    if (ImGui::Button("Attach", ImVec2(-1, 28))) proc.Attach(procName);
+                }
+                else {
+                    if (ImGui::Button("Detach", ImVec2(-1, 28))) proc.Detach();
+                }
+                ImGui::Text("Status: %s (PID: %lu)", proc.IsAttached() ? (proc.IsAlive() ? "Attached" : "Dead") : "Not attached", (unsigned long)proc.pid());
+
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
+                ImGui::Text("Search");
+                ImGui::PopStyleColor();
+                ImGui::Separator();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::Combo("Type", &selectedType, types, IM_ARRAYSIZE(types));
+
+                if (selectedType == 4) {
+                    float temp = (float)inputVal;
+                    if (ImGui::InputFloat("Value", &temp)) inputVal = (double)temp;
+                }
+                else if (selectedType == 5) {
+                    ImGui::InputDouble("Value", &inputVal);
+                }
+                else {
+                    int temp = (int)inputVal;
+                    if (ImGui::InputInt("Value", &temp)) inputVal = (double)temp;
+                }
+
+                if (ImGui::Button("First Scan", ImVec2(-1, 32))) {
+                    const double t0 = ImGui::GetTime();
+                    switch (selectedType) {
+                    case 0: scanner.firstSearch(proc, (int8_t)inputVal); break;
+                    case 1: scanner.firstSearch(proc, (int16_t)inputVal); break;
+                    case 2: scanner.firstSearch(proc, (int32_t)inputVal); break;
+                    case 3: scanner.firstSearch(proc, (int64_t)inputVal); break;
+                    case 4: scanner.firstSearch(proc, (float)inputVal); break;
+                    case 5: scanner.firstSearch(proc, (double)inputVal); break;
+                    }
+                    lastScanMs = (ImGui::GetTime() - t0) * 1000.0;
+                    selectedRow = -1;
+                }
+                if (ImGui::Button("Next Scan", ImVec2(-1, 32))) {
+                    const double t0 = ImGui::GetTime();
+                    switch (selectedType) {
+                    case 0: scanner.nextSearch(proc, (int8_t)inputVal); break;
+                    case 1: scanner.nextSearch(proc, (int16_t)inputVal); break;
+                    case 2: scanner.nextSearch(proc, (int32_t)inputVal); break;
+                    case 3: scanner.nextSearch(proc, (int64_t)inputVal); break;
+                    case 4: scanner.nextSearch(proc, (float)inputVal); break;
+                    case 5: scanner.nextSearch(proc, (double)inputVal); break;
+                    }
+                    lastScanMs = (ImGui::GetTime() - t0) * 1000.0;
+                }
+
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
+                ImGui::Text("Quick Write");
+                ImGui::PopStyleColor();
+                ImGui::Separator();
+                ImGui::SetNextItemWidth(-1);
+                if (selectedType == 4) {
+                    float tmp = (float)writeValue; if (ImGui::InputFloat("##qw", &tmp)) writeValue = tmp;
+                }
+                else if (selectedType == 5) {
+                    ImGui::InputDouble("##qw", &writeValue);
+                }
+                else {
+                    int tmp = (int)writeValue; if (ImGui::InputInt("##qw", &tmp)) writeValue = (double)tmp;
+                }
+                ImGui::TextDisabled("Double-click row to write");
+
+                ImGui::Spacing();
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
+                ImGui::Text("View Filter");
+                ImGui::PopStyleColor();
+                ImGui::Separator();
+                ImGui::SetNextItemWidth(-1);
+                ImGui::InputText("Addr filter", addrFilter, IM_ARRAYSIZE(addrFilter));
+                ImGui::SetNextItemWidth(-1);
+                ImGui::SliderInt("Show limit", &shownLimit, 100, 50000);
+            }
+            ImGui::EndChild();
+
+            ImGui::SameLine();
+
+            // --- RIGHT PANE (Results Table) ---
+            ImGui::BeginChild("RightPane", ImVec2(0, content.y), true);
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
+                ImGui::Text("Results List");
+                ImGui::PopStyleColor();
+                ImGui::Separator();
+
+                ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable |
+                    ImGuiTableFlags_Sortable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY;
+
+                if (ImGui::BeginTable("ResultsTable", 4, flags, ImGui::GetContentRegionAvail())) {
+                    ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_DefaultSort);
+                    ImGui::TableSetupColumn("Value");
+                    ImGui::TableSetupColumn("Prev");
+                    ImGui::TableSetupColumn("Delta");
+                    ImGui::TableHeadersRow();
+
+                    ImGuiListClipper clipper;
+                    const int n = freezeResults ? (int)frozen.size() : (int)scanner.getResults();
+                    auto getRow = [&](int i) -> const ScanResult* {
+                        return freezeResults ? &frozen[(size_t)i] : scanner.getTaregetPtr((size_t)i);
+                        };
+
+                    clipper.Begin(n);
+                    int shown = 0;
+                    while (clipper.Step()) {
+                        for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
+                            if (shown >= shownLimit) break;
+                            const auto* rp = getRow(i);
+                            if (!rp) continue;
+                            const auto& r = *rp;
+
+                            if (addrFilter[0] != '\0') {
+                                char buf[32]; sprintf_s(buf, "0x%llX", (unsigned long long)r.addr);
+                                if (strstr(buf, addrFilter) == nullptr) continue;
+                            }
+
+                            ImGui::TableNextRow();
+                            ImGui::TableSetColumnIndex(0);
+                            bool isSelected = (selectedRow == i);
+                            char addrStr[32]; sprintf_s(addrStr, "0x%llX", (unsigned long long)r.addr);
+                            if (ImGui::Selectable(addrStr, isSelected, ImGuiSelectableFlags_SpanAllColumns)) { selectedRow = i; }
+
+                            if (ImGui::IsItemHovered()) {
+                                selectedRow = i;
+                                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && proc.IsAttached() && proc.IsAlive()) {
+                                    switch (selectedType) {
+                                    case 0: proc.Write<int8_t>(r.addr, (int8_t)writeValue); break;
+                                    case 1: proc.Write<int16_t>(r.addr, (int16_t)writeValue); break;
+                                    case 2: proc.Write<int32_t>(r.addr, (int32_t)writeValue); break;
+                                    case 3: proc.Write<int64_t>(r.addr, (int64_t)writeValue); break;
+                                    case 4: proc.Write<float>(r.addr, (float)writeValue); break;
+                                    case 5: proc.Write<double>(r.addr, (double)writeValue); break;
+                                    }
+                                }
+                            }
+
+                            ImGui::TableSetColumnIndex(1); displayValue(r.lastValue);
+                            ImGui::TableSetColumnIndex(2); displayValue(r.prevValue);
+                            ImGui::TableSetColumnIndex(3);
+                            double delta = getDelta(r.lastValue, r.prevValue);
+                            if (delta > 0) ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "+%.2f", delta);
+                            else if (delta < 0) ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "%.2f", delta);
+                            else ImGui::TextDisabled("0.00");
+                            shown++;
+                        }
+                    }
+                    ImGui::EndTable();
+                }
+            }
+            ImGui::EndChild();
+            ImGui::EndTabItem();
         }
 
-        
+        // ---------------- TAB 2: INJECTION ----------------
+        if (ImGui::BeginTabItem("Code Injection"))
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
+            ImGui::Text("Shellcode / ASM Injector");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+
+            ImGui::Text("Input Hex (e.g., 90 90 90) or Assembly:");
+            float editorH = ImGui::GetContentRegionAvail().y - 100.0f;
+            ImGui::InputTextMultiline("##asm_editor", asmBuffer, IM_ARRAYSIZE(asmBuffer),
+                ImVec2(-1, editorH), ImGuiInputTextFlags_AllowTabInput);
+
+            ImGui::Spacing();
+            if (ImGui::Button("Execute Injection", ImVec2(160, 40))) {
+                ks_engine* ks;
+                ks_err err;
+                size_t count;
+                unsigned char* encode;
+                size_t size;
+
+                // 1. Keystone エンジンを初期化 (x86 64bitモード)
+                err = ks_open(KS_ARCH_X86, KS_MODE_64, &ks);
+                if (err != KS_ERR_OK) {
+                    // エンジンの起動失敗（初期化エラー）
+                    return;
+                }
+
+                // 2. asmBuffer のテキストをアセンブル（マシンコードに変換）
+                if (ks_asm(ks, asmBuffer, 0, &encode, &size, &count) == KS_ERR_OK) {
+
+                    // 3. 変換されたバイト列を vector に格納
+                    std::vector<uint8_t> machineCode(encode, encode + size);
+
+                    // 4. あなたの injector クラスで実行！
+                    // ※ injector の関数名に合わせて調整してください
+                    if (!machineCode.empty()) {
+                        injector.InjectAndExecute(proc, machineCode);
+                    }
+
+                    // メモリ解放
+                    ks_free(encode);
+                }
+                else {
+                   
+                    ks_strerror(ks_errno(ks));
+                }
+
+                ks_close(ks);
+
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Clear", ImVec2(100, 40))) { asmBuffer[0] = '\0'; }
+
+            ImGui::TextDisabled("Note: Make sure the process is attached before injecting code.");
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
     }
 
-   
-    ImGui::EndChild();
+    
     ImGui::End();
 }
