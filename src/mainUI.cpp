@@ -228,7 +228,7 @@ void MainUI::draw(Scanner& scanner, Process& proc)
     // ====== ç∂âEÉyÉCÉì ======
     ImGui::BeginChild("LeftPane", ImVec2(leftW, content.y), true);
     {
-        static char procName[128] = "game.exe";
+        static char procName[128] = "mygame.exe";//128Ç‹Ç≈
         static bool attached = false;
 
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.85f, 0.90f, 1.00f));
