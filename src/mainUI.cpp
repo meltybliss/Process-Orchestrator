@@ -471,7 +471,7 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
         }
 
         // ---------------- TAB 3: DLL INJECTOR ----------------
-        if (ImGui::BeginTabItem("DLL Manual Map")) {
+        if (ImGui::BeginTabItem("Manual Map Injector")) {
 
             static char selectedPath[MAX_PATH] = "No file selected...";
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f)); // åxçêÇÃê‘êF
@@ -521,7 +521,7 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
             ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 100);
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
             ImGui::Text("      .---.      \n     /     \\     \n    ( () () )    \n     )  ^  (     \n    / ||||| \\    \n    | ||||| |    ");
-            ImGui::Text("  WARNING: THIS ACTION IS UNDETECTABLE BUT RISKY.");
+            ImGui::Text("  That thing next to me looks like an octopus");
             ImGui::PopStyleColor();
 
             ImGui::EndTabItem();

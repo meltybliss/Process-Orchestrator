@@ -136,12 +136,38 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 	}
 #endif
 
+	std::cout << "[*] hijacking Thread..." << std::endl;
+
+	//ターゲットのスレッド（例えばメインスレッド）のIDを取得
+
+	//Thread
+	std::cout << "[*] hijacking Thread..." << std::endl;
+	DWORD threadId = proc.GetMainThreadId();
+	HANDLE hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, threadId);
+	if (hThread == NULL || hThread == INVALID_HANDLE_VALUE) {
+		std::cout << "[!] Failed to open thread. Error: " << GetLastError() << std::endl;
+		return false;
+	}
+
+	//スレッドを一時停止させる
+	SuspendThread(hThread);
+
+	//最新の脳みそ(context)をコピーする
+	CONTEXT ctx;
+	ctx.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+	GetThreadContext(hThread, &ctx);
+
+	uintptr_t originalRip = ctx.Rip;
+	///
+
+
 	// 3. パラメータのセット
 	data.pbase = (BYTE*)targetBase;
 	data.fdwReasonParam = DLL_PROCESS_ATTACH;
 	data.reservedParam = nullptr;
 	data.SEHSupport = TRUE; // これを TRUE にすることでシェルコード側で SEH が登録される
 	data.hMod = NULL; // 成功報告を待つために NULL で初期化
+	data.originalRip = originalRip;
 
 	// ターゲットプロセス内に構造体用のメモリを確保
 	void* pMappingDataAlloc = VirtualAllocEx(proc.hProcess, nullptr, sizeof(MANUAL_MAPPING_DATA), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -165,11 +191,26 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 	// 遠隔スレッドを作成して、シェルコードを起動！
 	// pMappingDataAlloc（指示書の住所）を引数として渡す
 
-	std::cout << "[*] Creating Remote Thread..." << std::endl;
-	HANDLE hThread = CreateRemoteThread(proc.hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)pShellCodeAlloc, pMappingDataAlloc, 0, nullptr);
-	if (!hThread) return false;
+	//次に実行する場所を、シェルコードの住所に書き換える
+	ctx.Rip = (DWORD64)pShellCodeAlloc;
+	ctx.Rcx = (DWORD64)pMappingDataAlloc;
 
-	std::cout << "[+] Thread Created. Waiting for response..." << std::endl;
+	//書き換えた「偽の脳」をCPUにセットし直す
+	SetThreadContext(hThread, &ctx);
+
+	//スレッドを再開
+	ResumeThread(hThread);
+
+
+	CloseHandle(hThread);
+
+	/**HANDLE hThread = CreateRemoteThread(proc.hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)pShellCodeAlloc, pMappingDataAlloc, 0, nullptr);
+	if (!hThread) return false;
+	*/
+
+	std::cout << "[+] Thread Hijacked. Waiting for response..." << std::endl;
+	
+	////
 
 	HINSTANCE hCheck = NULL;
 	const int timeoutMs = 10000; // 10秒待ってダメなら諦める
