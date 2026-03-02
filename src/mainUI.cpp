@@ -507,7 +507,10 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
                     // ここであなたの ManualMap を呼び出す！
                     bool success = injector.ManualMap(proc, selectedPath);
                     if (success) {
-                        // 成功したら何かログを出す
+                        printf("target is now under control,\n");
+                    }
+                    else {
+                        printf("injection failed. Check architecture or permissions.\n");
                     }
                 }
             }

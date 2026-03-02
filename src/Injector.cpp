@@ -3,7 +3,7 @@
 
 
 void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData);
-
+void __stdcall ShellCode_End();
 
 bool ManualInjector::InjectAndExecute(Process& proc, const std::vector<unsigned char>& shellCode) {
 	if (!proc.IsAttached() || !proc.IsAlive() || shellCode.empty()) return false;
@@ -68,6 +68,7 @@ bool ManualInjector::InjectAndExecute(Process& proc, const std::vector<unsigned 
 
 bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 {
+	std::cout << "[*] Loading DLL: " << dllPath << std::endl;
 	// 1. DLLファイルをバイナリとして読み込む
 	std::ifstream file(dllPath, std::ios::binary | std::ios::ate);//ate mode
 	if (file.fail()) return false;
@@ -91,7 +92,9 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 		ntHeader->OptionalHeader.SizeOfImage, 
 		MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 
-	if (!targetBase) return false;
+	if (!targetBase) { std::cout << "[-] VirtualAllocEx Failed!" << std::endl; return false; }
+
+	std::cout << "[+] TargetBase Allocated at: " << targetBase << std::endl;
 
 	// --- ここから先の処理（再配置やインポート解決）はさらに複雑になります ---
 	// 4. セクションのコピー
@@ -105,7 +108,11 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 			// コピー元：読み込んだデータ(rawData) + ファイル上のズレ(PointerToRawData)
 			void* src = rawData.data() + pSectionHeader[i].PointerToRawData;
 			// 実際にターゲットプロセスのメモリへ書き込む
+
+			std::cout << "[*] Writing ShellCode..." << std::endl;
+
 			if (!WriteProcessMemory(proc.hProcess, dest, src, pSectionHeader[i].SizeOfRawData, nullptr)) {
+				std::cout << "[-] Failed to write ShellCode!" << std::endl;
 				VirtualFreeEx(proc.hProcess, targetBase, 0, MEM_RELEASE);
 				return false;
 			}
@@ -130,15 +137,38 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 	void* pShellCodeAlloc = VirtualAllocEx(proc.hProcess, nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!pShellCodeAlloc) return false;
 
+	// 関数のサイズを正しく計算して書き込む
+	size_t codeSize = (uintptr_t)ShellCode_End - (uintptr_t)ShellCode;
+	if (codeSize <= 0 || codeSize > 0x1000) codeSize = 0x1000;
+
 	//定義したShellcode 関数をターゲットに書き込む. Shellcode関数をそのままコピーして送り込む
-	WriteProcessMemory(proc.hProcess, pShellCodeAlloc, ShellCode, 0x1000, nullptr);
+	WriteProcessMemory(proc.hProcess, pShellCodeAlloc, (void*)ShellCode, codeSize, nullptr);
 
 	// 遠隔スレッドを作成して、シェルコードを起動！
 	// pMappingDataAlloc（指示書の住所）を引数として渡す
+
+	std::cout << "[*] Creating Remote Thread..." << std::endl;
 	HANDLE hThread = CreateRemoteThread(proc.hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)pShellCodeAlloc, pMappingDataAlloc, 0, nullptr);
 	if (!hThread) return false;
 
-	HINSTANCE hCheck = NULL;
+	std::cout << "[+] Thread Created. Waiting for response..." << std::endl;
+
+	// 5秒間だけ待機して、状況をチェックする
+	for (int i = 0; i < 500; i++) {
+		MANUAL_MAPPING_DATA data_checked{ 0 };
+		ReadProcessMemory(proc.hProcess, pMappingDataAlloc, &data_checked, sizeof(data_checked), nullptr);
+
+		if (data_checked.hMod > (HINSTANCE)0x500) {
+			printf("Success! DLL Base: %p\n", data_checked.hMod);
+			break;
+		}
+		else if (data_checked.hMod != NULL) {
+			printf("Current Step: %p\n", data_checked.hMod);
+		}
+		Sleep(10);
+	}
+
+	/*HINSTANCE hCheck = NULL;
 	while (!hCheck) {
 		MANUAL_MAPPING_DATA data_checked{ 0 };
 		ReadProcessMemory(proc.hProcess, pMappingDataAlloc, &data_checked, sizeof(data_checked), nullptr);
@@ -146,7 +176,7 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 		Sleep(10);//cpu wo 10 byou yasumeru
 	}
 
-	printf("DLL Mapping Successful! At: %p\n", hCheck);
+	printf("DLL Mapping Successful! At: %p\n", hCheck);*/
 
 	return true;
 
@@ -160,8 +190,10 @@ void ManualInjector::ReportError(const char* msg)
 #pragma runtime_checks("", off)
 #pragma optimize("", off)
 
-void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
+/**void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
 	if (!pData) return;
+	pData->hMod = (HINSTANCE)0x1337;
+	return;
 
 	// 指示書から「ベースのアドレス」を取り出す
 	BYTE* pBase = (BYTE*)pData->pbase;
@@ -240,7 +272,76 @@ void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
 
 	// --- 3. DllMain の実行 ---
 
-	_DllMain(pBase, pData->fdwReasonParam, nullptr);
+	_DllMain((HINSTANCE)pBase, pData->fdwReasonParam, nullptr);
 	// 最後に、成功した証としてベースアドレスを指示書に書き残しておく
 	pData->hMod = (HINSTANCE)pBase;
+}*/
+
+void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
+	if (!pData) return;
+
+	// --- 生存報告 1: 開始直後 ---
+	pData->hMod = (HINSTANCE)0x111;
+
+	BYTE* pBase = (BYTE*)pData->pbase;
+	auto* pDos = (PIMAGE_DOS_HEADER)pBase;
+	auto* pNt = (PIMAGE_NT_HEADERS)(pBase + pDos->e_lfanew);
+	auto* pOpt = &pNt->OptionalHeader;
+
+	auto _LoadLibraryA = pData->pLoadLibraryA;
+	auto _GetProcAddress = pData->pGetProcAddress;
+	auto _DllMain = (f_DLL_ENTRY_POINT)(pBase + pOpt->AddressOfEntryPoint);
+
+	// --- 生存報告 2: 再配置開始 ---
+	pData->hMod = (HINSTANCE)0x222;
+
+	BYTE* LocationDelta = pBase - pOpt->ImageBase;
+	if (LocationDelta != 0) {
+		auto* pRelocData = (IMAGE_BASE_RELOCATION*)(pBase + pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress);
+		while (pRelocData->VirtualAddress) {
+			UINT AmountOfEntries = (pRelocData->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+			WORD* pRelativeInfo = (WORD*)(pRelocData + 1);
+			for (UINT i = 0; i < AmountOfEntries; ++i) {
+				if ((pRelativeInfo[i] >> 12) == IMAGE_REL_BASED_HIGHLOW || (pRelativeInfo[i] >> 12) == IMAGE_REL_BASED_DIR64) {
+					uintptr_t* pPatch = (uintptr_t*)(pBase + pRelocData->VirtualAddress + (pRelativeInfo[i] & 0xFFF));
+					*pPatch += (uintptr_t)LocationDelta;
+				}
+			}
+			pRelocData = (IMAGE_BASE_RELOCATION*)((BYTE*)pRelocData + pRelocData->SizeOfBlock);
+		}
+	}
+
+	// --- 生存報告 3: インポート解決開始 ---
+	pData->hMod = (HINSTANCE)0x333;
+
+	if (pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size) {
+		auto* pImportDescr = (IMAGE_IMPORT_DESCRIPTOR*)(pBase + pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
+		while (pImportDescr->Name) {
+			char* szMod = (char*)(pBase + pImportDescr->Name);
+			HINSTANCE hDll = _LoadLibraryA(szMod);
+			ULONG_PTR* pThunkRef = (ULONG_PTR*)(pBase + pImportDescr->OriginalFirstThunk);
+			ULONG_PTR* pFuncRef = (ULONG_PTR*)(pBase + pImportDescr->FirstThunk);
+			if (!pImportDescr->OriginalFirstThunk) pThunkRef = pFuncRef;
+			for (; *pThunkRef; ++pThunkRef, ++pFuncRef) {
+				if (IMAGE_SNAP_BY_ORDINAL(*pThunkRef)) {
+					*pFuncRef = (ULONG_PTR)_GetProcAddress(hDll, (char*)(*pThunkRef & 0xFFFF));
+				}
+				else {
+					auto* pImport = (IMAGE_IMPORT_BY_NAME*)(pBase + (*pThunkRef));
+					*pFuncRef = (ULONG_PTR)_GetProcAddress(hDll, pImport->Name);
+				}
+			}
+			pImportDescr++;
+		}
+	}
+
+	// --- 生存報告 4: DllMain直前 ---
+	pData->hMod = (HINSTANCE)0x444;
+	_DllMain((HINSTANCE)pBase, pData->fdwReasonParam, nullptr);
+
+	// --- 最終報告: 成功 ---
+	pData->hMod = (HINSTANCE)pBase;
 }
+
+// ShellCode の終わりをマークするダミー関数
+void __stdcall ShellCode_End() {}

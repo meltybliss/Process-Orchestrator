@@ -7,9 +7,9 @@
 
 //シェルコードが使うAPIの住所用
 //シェルコードの中で LoadLibraryA などを呼び出すために、関数の型を定義
-using f_LoadLibraryA = HINSTANCE(WINAPI*)(const char* lpLibFileName);
-using f_GetProcAddress = UINT_PTR(WINAPI*)(HMODULE hModule, const char* lpProcName);
-using f_DLL_ENTRY_POINT = BOOL(WINAPI*)(void* hDLL, DWORD dwReason, void* pReserved);
+using f_LoadLibraryA = HINSTANCE(WINAPI*)(LPCSTR lpLibFileName);
+using f_GetProcAddress = FARPROC(WINAPI*)(HMODULE hModule, LPCSTR lpProcName);
+using f_DLL_ENTRY_POINT = BOOL(WINAPI*)(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved);
 
 struct MANUAL_MAPPING_DATA {
 	f_LoadLibraryA pLoadLibraryA;
