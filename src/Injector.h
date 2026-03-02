@@ -11,13 +11,24 @@ using f_LoadLibraryA = HINSTANCE(WINAPI*)(LPCSTR lpLibFileName);
 using f_GetProcAddress = FARPROC(WINAPI*)(HMODULE hModule, LPCSTR lpProcName);
 using f_DLL_ENTRY_POINT = BOOL(WINAPI*)(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved);
 
+#ifdef _WIN64
+using f_RtlAddFunctionTable = BOOL(WINAPI*)(PRUNTIME_FUNCTION FunctionTable, DWORD EntryCount, DWORD64 BaseAddress);
+#endif
+
+#pragma pack(push, 8)
 struct MANUAL_MAPPING_DATA {
-	f_LoadLibraryA pLoadLibraryA;
-	f_GetProcAddress pGetProcAddress;
-	void* pbase;// DLLÇ™íuÇ©ÇÍÇΩèÍèä (targetBase)
-	DWORD fdwReasonParam;// DLL_PROCESS_ATTACH ìôÇÃÉtÉâÉO
-	HINSTANCE hMod;//ê¨å˜ÇµÇΩÇÁÇ±Ç±Ç… DLL ÇÃèZèäÇ™ì¸ÇÈ
+    f_LoadLibraryA pLoadLibraryA;
+    f_GetProcAddress pGetProcAddress;
+#ifdef _WIN64
+    f_RtlAddFunctionTable pRtlAddFunctionTable;
+#endif
+    BYTE* pbase;
+    DWORD           fdwReasonParam;
+    LPVOID          reservedParam;
+    BOOL            SEHSupport;
+    HINSTANCE       hMod;
 };
+#pragma pack(pop)
 
 class ManualInjector {
 public:
