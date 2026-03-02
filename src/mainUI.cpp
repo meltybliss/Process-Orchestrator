@@ -1,6 +1,28 @@
 #include "mainUI.h"
 #include <keystone/keystone.h>
+#include "commdlg.h"
 
+std::string SelectDLLFile() {
+    OPENFILENAMEA ofn;       // ダイアログの設定を入れる構造体
+    char szFile[260] = { 0 }; // 選んだパスを保存する場所
+
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFilter = "DLL Files\0*.dll\0All Files\0*.*\0"; // DLLだけ見せる
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrInitialDir = NULL;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+    if (GetOpenFileNameA(&ofn)) {
+        return std::string(szFile); // パスを返す
+    }
+    return ""; // キャンセルされたら空っぽ
+}
 
 static void ApplyProTheme()
 {
@@ -447,6 +469,62 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
             ImGui::TextDisabled("Note: Make sure the process is attached before injecting code.");
             ImGui::EndTabItem();
         }
+
+        // ---------------- TAB 3: DLL INJECTOR ----------------
+        if (ImGui::BeginTabItem("DLL Manual Map")) {
+
+            static char selectedPath[MAX_PATH] = "No file selected...";
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f)); // 警告の赤色
+            ImGui::Text("FATAL INJECTION SYSTEM");
+            ImGui::PopStyleColor();
+            ImGui::Separator();
+
+            ImGui::Spacing();
+
+            // ファイル選択エリア
+            if (ImGui::Button("Browse DLL...", ImVec2(120, 30))) {
+                std::string path = SelectDLLFile(); // さっき作った関数
+                if (!path.empty()) {
+                    strcpy_s(selectedPath, path.c_str());
+                }
+            }
+            ImGui::SameLine();
+            ImGui::TextUnformatted(selectedPath);
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // ドクロマーク付きの危険なボタン
+            // スタイルを一時的に赤系に変える
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.0f, 0.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
+
+            // ボタンのサイズを大きくして「覚悟」を求める
+            if (ImGui::Button(" [X]  EXECUTE MANUAL MAP  [X] ", ImVec2(-1, 60))) {
+                if (proc.IsAttached() && selectedPath[0] != 'N') {
+                    // ここであなたの ManualMap を呼び出す！
+                    bool success = injector.ManualMap(proc, selectedPath);
+                    if (success) {
+                        // 成功したら何かログを出す
+                    }
+                }
+            }
+
+            ImGui::PopStyleColor(3);
+
+            // 下の方にドクロのアスキーアートを添えて「毒」を演出
+            ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 100);
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+            ImGui::Text("      .---.      \n     /     \\     \n    ( () () )    \n     )  ^  (     \n    / ||||| \\    \n    | ||||| |    ");
+            ImGui::Text("  WARNING: THIS ACTION IS UNDETECTABLE BUT RISKY.");
+            ImGui::PopStyleColor();
+
+            ImGui::EndTabItem();
+
+        }
+
         ImGui::EndTabBar();
     }
 
