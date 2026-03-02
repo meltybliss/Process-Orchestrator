@@ -8,8 +8,12 @@ public:
 	HANDLE hProcess;
 
 	DWORD GetPidByName(const char* processName);
+
+	DWORD GetMainThreadId();
+
 	bool Attach(const char* processName);
 	void Detach();
+
 
 	template<typename T> 
 	bool Read(uintptr_t address, T* buffer) {
@@ -24,7 +28,6 @@ public:
 	DWORD pid() { return m_pid; }
 
 	bool IsAttached() { return hProcess != NULL; }
-
 
 	bool IsAlive() const;
 

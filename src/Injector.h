@@ -27,6 +27,7 @@ struct MANUAL_MAPPING_DATA {
     LPVOID          reservedParam;
     BOOL            SEHSupport;
     HINSTANCE       hMod;
+    uintptr_t originalRip;
 };
 #pragma pack(pop)
 
