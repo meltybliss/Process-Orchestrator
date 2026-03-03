@@ -539,7 +539,7 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
             
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
             // ロゴとの間隔を詰めたい場合は SetCursorPosY で微調整も可能
-            ImGui::Text(" [ KERNEL-LINKED EXTERNAL SYSTEM ] ");
+            ImGui::Text(" [ KERNEL-LINKED SYSTEM ] ");
             ImGui::PopStyleColor();
 
             ImGui::EndTabItem();
