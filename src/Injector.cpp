@@ -151,6 +151,17 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 	// 指示書を書き込む
 	WriteProcessMemory(proc.hProcess, pMappingDataAlloc, &data, sizeof(MANUAL_MAPPING_DATA), nullptr);
 
+
+	// すべてのセクションと PE ヘッダーを書き込み終わったので、
+	// targetBase（DLL本体）のメモリ属性を RW から RX に変更して、実行可能にする。
+	/**DWORD oldProtect;
+	if (!VirtualProtectEx(proc.hProcess, targetBase,
+		ntHeader->OptionalHeader.SizeOfImage,
+		PAGE_EXECUTE_READ, &oldProtect)) {
+		std::cout << "[-] Failed to change Memory Protection!" << std::endl;
+		
+	}*/
+
 	// --- ステップ6: シェルコードの転送と実行 ---
 	// シェルコード用のメモリを確保（実行権限 PAGE_EXECUTE_READWRITE が必須）
 	void* pShellCodeAlloc = VirtualAllocEx(proc.hProcess, nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -193,11 +204,18 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 				printf("\r[*] ShellCode Status: 0x%p", (void*)hCheck);
 			}
 
-			if (hCheck > (HINSTANCE)0x500) { // DLLのベースアドレスが書き込まれたら成功
+			if (hCheck == (HINSTANCE)targetBase) { // 住所が完全に一致した時だけ成功とみなす
 				printf("\n[+] Success! DLL Base: %p\n", hCheck);
 
-				// 【重要】成功を確認したので、ターゲット側の無限ループを終わらせる
-				// これで ShellCode の while が終了する
+				// ステルス処理（ヘッダー消去）
+				DWORD old;
+				VirtualProtectEx(proc.hProcess, targetBase, 0x1000, PAGE_READWRITE, &old);
+				std::vector<uint8_t> zeroBuffer(0x1000, 0);
+				WriteProcessMemory(proc.hProcess, targetBase, zeroBuffer.data(), zeroBuffer.size(), nullptr);
+
+				VirtualProtectEx(proc.hProcess, targetBase, ntHeader->OptionalHeader.SizeOfImage, PAGE_EXECUTE_READ, &old);
+
+				// シェルコードに「片付けしていいよ」と合図を送る
 				data_checked.hMod = (HINSTANCE)0xDEADBEEF;
 				WriteProcessMemory(proc.hProcess, pMappingDataAlloc, &data_checked, sizeof(data_checked), nullptr);
 				break;
@@ -323,8 +341,13 @@ void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
 	f_DLL_ENTRY_POINT _RealDllMain = (f_DLL_ENTRY_POINT)(pBase + pOpt->AddressOfEntryPoint);
 	_RealDllMain((HINSTANCE)pBase, pData->fdwReasonParam, pData->reservedParam);
 
+
 	// 呼び出しが終わったら成功報告
 	pData->hMod = (HINSTANCE)pBase;
+
+	while (pData->hMod != (HINSTANCE)0xDEADBEEF) {
+		// スリープ代わりの空ループ。実際は Sleep をインポートして呼ぶのがベスト
+	}
 }
 // ShellCode の終わりをマークするダミー関数
 void __stdcall ShellCode_End() {}

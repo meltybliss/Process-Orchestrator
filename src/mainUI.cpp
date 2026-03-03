@@ -1,17 +1,17 @@
-#include "mainUI.h"
+ï»¿#include "mainUI.h"
 #include <keystone/keystone.h>
 #include "commdlg.h"
 
 std::string SelectDLLFile() {
-    OPENFILENAMEA ofn;       // ƒ_ƒCƒAƒƒO‚Ìİ’è‚ğ“ü‚ê‚é\‘¢‘Ì
-    char szFile[260] = { 0 }; // ‘I‚ñ‚¾ƒpƒX‚ğ•Û‘¶‚·‚éêŠ
+    OPENFILENAMEA ofn;       // ãƒ€ã‚¤ã‚¢ãƒ­ã‚°ã®è¨­å®šã‚’å…¥ã‚Œã‚‹æ§‹é€ ä½“
+    char szFile[260] = { 0 }; // é¸ã‚“ã ãƒ‘ã‚¹ã‚’ä¿å­˜ã™ã‚‹å ´æ‰€
 
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = NULL;
     ofn.lpstrFile = szFile;
     ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = "DLL Files\0*.dll\0All Files\0*.*\0"; // DLL‚¾‚¯Œ©‚¹‚é
+    ofn.lpstrFilter = "DLL Files\0*.dll\0All Files\0*.*\0"; // DLLã ã‘è¦‹ã›ã‚‹
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = NULL;
     ofn.nMaxFileTitle = 0;
@@ -19,9 +19,9 @@ std::string SelectDLLFile() {
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
     if (GetOpenFileNameA(&ofn)) {
-        return std::string(szFile); // ƒpƒX‚ğ•Ô‚·
+        return std::string(szFile); // ãƒ‘ã‚¹ã‚’è¿”ã™
     }
-    return ""; // ƒLƒƒƒ“ƒZƒ‹‚³‚ê‚½‚ç‹ó‚Á‚Û
+    return ""; // ã‚­ãƒ£ãƒ³ã‚»ãƒ«ã•ã‚ŒãŸã‚‰ç©ºã£ã½
 }
 
 static void ApplyProTheme()
@@ -29,7 +29,7 @@ static void ApplyProTheme()
     ImGuiStyle& s = ImGui::GetStyle();
     ImGui::StyleColorsDark();
 
-    // ŠÛ‚İ‚Æ—]”’igWindowsƒc[ƒ‹h‚Á‚Û‚³j
+    // ä¸¸ã¿ã¨ä½™ç™½ï¼ˆâ€œWindowsãƒ„ãƒ¼ãƒ«â€ã£ã½ã•ï¼‰
     s.WindowRounding = 10.0f;
     s.ChildRounding = 10.0f;
     s.FrameRounding = 8.0f;
@@ -48,7 +48,7 @@ static void ApplyProTheme()
     s.PopupBorderSize = 1.0f;
     s.TabBorderSize = 0.0f;
 
-    // gƒMƒ‰‚Â‚«‚·‚¬‚È‚¢hƒAƒNƒZƒ“ƒgFiƒVƒAƒ“Šñ‚èj
+    // â€œã‚®ãƒ©ã¤ãã™ããªã„â€ã‚¢ã‚¯ã‚»ãƒ³ãƒˆè‰²ï¼ˆã‚·ã‚¢ãƒ³å¯„ã‚Šï¼‰
     ImVec4* c = s.Colors;
     c[ImGuiCol_WindowBg] = ImVec4(0.07f, 0.08f, 0.10f, 1.00f);
     c[ImGuiCol_ChildBg] = ImVec4(0.06f, 0.07f, 0.09f, 1.00f);
@@ -64,8 +64,8 @@ static void ApplyProTheme()
     c[ImGuiCol_FrameBgHovered] = ImVec4(0.16f, 0.18f, 0.22f, 1.00f);
     c[ImGuiCol_FrameBgActive] = ImVec4(0.18f, 0.20f, 0.26f, 1.00f);
 
-    // ƒAƒNƒZƒ“ƒgi‚±‚±‚ªgÂh‚©‚ç’E‹p‚·‚éêŠj
-    ImVec4 accent = ImVec4(0.20f, 0.85f, 0.90f, 1.00f); // ƒVƒAƒ“
+    // ã‚¢ã‚¯ã‚»ãƒ³ãƒˆï¼ˆã“ã“ãŒâ€œé’â€ã‹ã‚‰è„±å´ã™ã‚‹å ´æ‰€ï¼‰
+    ImVec4 accent = ImVec4(0.20f, 0.85f, 0.90f, 1.00f); // ã‚·ã‚¢ãƒ³
     ImVec4 accentHover = ImVec4(0.25f, 0.92f, 0.96f, 1.00f);
     ImVec4 accentActive = ImVec4(0.15f, 0.75f, 0.80f, 1.00f);
 
@@ -96,7 +96,7 @@ static void ApplyProTheme()
     c[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.22f, 0.24f, 0.32f, 1.00f);
     c[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.26f, 0.28f, 0.38f, 1.00f);
 
-    // ƒe[ƒuƒ‹‚ÌŒ©‚½–ÚiŒ‹‰Êˆê——‚ªgƒc[ƒ‹Š´ho‚éj
+    // ãƒ†ãƒ¼ãƒ–ãƒ«ã®è¦‹ãŸç›®ï¼ˆçµæœä¸€è¦§ãŒâ€œãƒ„ãƒ¼ãƒ«æ„Ÿâ€å‡ºã‚‹ï¼‰
     c[ImGuiCol_TableHeaderBg] = ImVec4(0.10f, 0.11f, 0.14f, 1.00f);
     c[ImGuiCol_TableBorderStrong] = ImVec4(0.18f, 0.20f, 0.26f, 1.00f);
     c[ImGuiCol_TableBorderLight] = ImVec4(0.14f, 0.16f, 0.20f, 1.00f);
@@ -111,7 +111,7 @@ MainUI::MainUI()
 void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
 {
     static bool freezeResults = false;
-    static char addrFilter[64] = "";      // "0x7FF..." ‚Æ‚© "7FF" ‚Å‚àOK
+    static char addrFilter[64] = "";      // "0x7FF..." ã¨ã‹ "7FF" ã§ã‚‚OK
     static int shownLimit = 5000;
     static int selectedRow = -1;
     static double lastScanMs = 0.0;
@@ -122,7 +122,7 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
     static std::vector<ScanResult> frozen;
     static bool prevFreeze = false;
 
-    static char asmBuffer[4096] = ""; // ƒCƒ“ƒWƒFƒNƒVƒ‡ƒ“—p
+    static char asmBuffer[4096] = ""; // ã‚¤ãƒ³ã‚¸ã‚§ã‚¯ã‚·ãƒ§ãƒ³ç”¨
 
 
 
@@ -183,7 +183,7 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
     };*/
     auto getDelta = [&](const unsigned char* cur, const unsigned char* prev) -> double {
         if (!cur || !prev) return 0.0f;
-        switch (selectedType) {//Scanner::Load8 ‚ÅstaticŠÖ”ŒÄ‚Ô
+        switch (selectedType) {//Scanner::Load8 ã§staticé–¢æ•°å‘¼ã¶
             case 0: return (double)(Scanner::Load8<int8_t>(cur) - Scanner::Load8<int8_t>(prev));
             case 1: return (double)(Scanner::Load8<int16_t>(cur) - Scanner::Load8<int16_t>(prev));
             case 2: return (double)(Scanner::Load8<int32_t>(cur) - Scanner::Load8<int32_t>(prev));
@@ -433,26 +433,26 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
                 unsigned char* encode;
                 size_t size;
 
-                // 1. Keystone ƒGƒ“ƒWƒ“‚ğ‰Šú‰» (x86 64bitƒ‚[ƒh)
+                // 1. Keystone ã‚¨ãƒ³ã‚¸ãƒ³ã‚’åˆæœŸåŒ– (x86 64bitãƒ¢ãƒ¼ãƒ‰)
                 err = ks_open(KS_ARCH_X86, KS_MODE_64, &ks);
                 if (err != KS_ERR_OK) {
-                    // ƒGƒ“ƒWƒ“‚Ì‹N“®¸”si‰Šú‰»ƒGƒ‰[j
+                    // ã‚¨ãƒ³ã‚¸ãƒ³ã®èµ·å‹•å¤±æ•—ï¼ˆåˆæœŸåŒ–ã‚¨ãƒ©ãƒ¼ï¼‰
                     return;
                 }
 
-                // 2. asmBuffer ‚ÌƒeƒLƒXƒg‚ğƒAƒZƒ“ƒuƒ‹iƒ}ƒVƒ“ƒR[ƒh‚É•ÏŠ·j
+                // 2. asmBuffer ã®ãƒ†ã‚­ã‚¹ãƒˆã‚’ã‚¢ã‚»ãƒ³ãƒ–ãƒ«ï¼ˆãƒã‚·ãƒ³ã‚³ãƒ¼ãƒ‰ã«å¤‰æ›ï¼‰
                 if (ks_asm(ks, asmBuffer, 0, &encode, &size, &count) == KS_ERR_OK) {
 
-                    // 3. •ÏŠ·‚³‚ê‚½ƒoƒCƒg—ñ‚ğ vector ‚ÉŠi”[
+                    // 3. å¤‰æ›ã•ã‚ŒãŸãƒã‚¤ãƒˆåˆ—ã‚’ vector ã«æ ¼ç´
                     std::vector<uint8_t> machineCode(encode, encode + size);
 
-                    // 4. ‚ ‚È‚½‚Ì injector ƒNƒ‰ƒX‚ÅÀsI
-                    // ¦ injector ‚ÌŠÖ”–¼‚É‡‚í‚¹‚Ä’²®‚µ‚Ä‚­‚¾‚³‚¢
+                    // 4. ã‚ãªãŸã® injector ã‚¯ãƒ©ã‚¹ã§å®Ÿè¡Œï¼
+                    // â€» injector ã®é–¢æ•°åã«åˆã‚ã›ã¦èª¿æ•´ã—ã¦ãã ã•ã„
                     if (!machineCode.empty()) {
                         injector.InjectAndExecute(proc, machineCode);
                     }
 
-                    // ƒƒ‚ƒŠ‰ğ•ú
+                    // ãƒ¡ãƒ¢ãƒªè§£æ”¾
                     ks_free(encode);
                 }
                 else {
@@ -474,16 +474,16 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
         if (ImGui::BeginTabItem("Manual Map Injector")) {
 
             static char selectedPath[MAX_PATH] = "No file selected...";
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f)); // Œx‚ÌÔF
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f)); // è­¦å‘Šã®èµ¤è‰²
             ImGui::Text("FATAL INJECTION SYSTEM");
             ImGui::PopStyleColor();
             ImGui::Separator();
 
             ImGui::Spacing();
 
-            // ƒtƒ@ƒCƒ‹‘I‘ğƒGƒŠƒA
+            // ãƒ•ã‚¡ã‚¤ãƒ«é¸æŠã‚¨ãƒªã‚¢
             if (ImGui::Button("Browse DLL...", ImVec2(120, 30))) {
-                std::string path = SelectDLLFile(); // ‚³‚Á‚«ì‚Á‚½ŠÖ”
+                std::string path = SelectDLLFile(); // ã•ã£ãä½œã£ãŸé–¢æ•°
                 if (!path.empty()) {
                     strcpy_s(selectedPath, path.c_str());
                 }
@@ -495,16 +495,16 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
             ImGui::Separator();
             ImGui::Spacing();
 
-            // ƒhƒNƒƒ}[ƒN•t‚«‚ÌŠëŒ¯‚Èƒ{ƒ^ƒ“
-            // ƒXƒ^ƒCƒ‹‚ğˆê“I‚ÉÔŒn‚É•Ï‚¦‚é
+            // ãƒ‰ã‚¯ãƒ­ãƒãƒ¼ã‚¯ä»˜ãã®å±é™ºãªãƒœã‚¿ãƒ³
+            // ã‚¹ã‚¿ã‚¤ãƒ«ã‚’ä¸€æ™‚çš„ã«èµ¤ç³»ã«å¤‰ãˆã‚‹
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.0f, 0.0f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
 
-            // ƒ{ƒ^ƒ“‚ÌƒTƒCƒY‚ğ‘å‚«‚­‚µ‚ÄuŠoŒåv‚ğ‹‚ß‚é
+            // ãƒœã‚¿ãƒ³ã®ã‚µã‚¤ã‚ºã‚’å¤§ããã—ã¦ã€Œè¦šæ‚Ÿã€ã‚’æ±‚ã‚ã‚‹
             if (ImGui::Button(" [X]  EXECUTE MANUAL MAP  [X] ", ImVec2(-1, 60))) {
                 if (proc.IsAttached() && selectedPath[0] != 'N') {
-                    // ‚±‚±‚Å‚ ‚È‚½‚Ì ManualMap ‚ğŒÄ‚Ño‚·I
+                    // ã“ã“ã§ã‚ãªãŸã® ManualMap ã‚’å‘¼ã³å‡ºã™ï¼
                     bool success = injector.ManualMap(proc, selectedPath);
                     if (success) {
                         printf("target is now under control,\n");
@@ -517,11 +517,29 @@ void MainUI::draw(Scanner& scanner, Process& proc, ManualInjector& injector)
 
             ImGui::PopStyleColor(3);
 
-            // ‰º‚Ì•û‚ÉƒhƒNƒ‚ÌƒAƒXƒL[ƒA[ƒg‚ğ“Y‚¦‚Äu“Åv‚ğ‰‰o
-            ImGui::SetCursorPosY(ImGui::GetWindowHeight() - 100);
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-            ImGui::Text("      .---.      \n     /     \\     \n    ( () () )    \n     )  ^  (     \n    / ||||| \\    \n    | ||||| |    ");
-            ImGui::Text("  That thing next to me looks like an octopus");
+
+            // ä¸‹ã®æ–¹ã«ãƒ‰ã‚¯ãƒ­ã®ã‚¢ã‚¹ã‚­ãƒ¼ã‚¢ãƒ¼ãƒˆã‚’æ·»ãˆã¦ã€Œæ¯’ã€ã‚’æ¼”å‡º
+            float total_logo_height = 160.0f;
+            float padding_bottom = ImGui::GetStyle().WindowPadding.y;
+
+            // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã®åº•ã‹ã‚‰ã€Œãƒ­ã‚´å…¨ä½“ã®é«˜ã•ã€åˆ†ã ã‘ä¸Šã«ã‚«ãƒ¼ã‚½ãƒ«ã‚’ã‚»ãƒƒãƒˆ
+            ImGui::SetCursorPosY(ImGui::GetWindowHeight() - total_logo_height - padding_bottom);
+
+            // --- MELTY ãƒ­ã‚´ ---
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.5f, 1.0f));
+            ImGui::Text(R"(
+  __  __   ______   __       ________  __      __ 
+ |  \/  | |  ____| |  |     |__    __| \ \    / / 
+ | \  / | | |__    |  |        |  |     \ \  / /  
+ | |\/| | |  __|   |  |        |  |      \ \/ /   
+ | |  | | | |____  |  |____    |  |       |  |    
+ |_|  |_| |______| |_______|   |__|       |__|    )");
+            ImGui::PopStyleColor();
+
+            
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+            // ãƒ­ã‚´ã¨ã®é–“éš”ã‚’è©°ã‚ãŸã„å ´åˆã¯ SetCursorPosY ã§å¾®èª¿æ•´ã‚‚å¯èƒ½
+            ImGui::Text(" [ KERNEL-LINKED EXTERNAL SYSTEM ] ");
             ImGui::PopStyleColor();
 
             ImGui::EndTabItem();
