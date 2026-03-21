@@ -18,7 +18,7 @@ DWORD Process::GetPidByName(const char* processName)
                 }
             } while (Process32Next(hSnapshot, &pe32));
         }
-
+        
     }
 
 

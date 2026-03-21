@@ -27,6 +27,7 @@ public:
 	};
 
 	~MemoryPool() {
+
 		if (targetBasePtr != nullptr) {
 			free(targetBasePtr);
 		}

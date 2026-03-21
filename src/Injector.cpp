@@ -1,4 +1,4 @@
-#include "Injector.h"
+ï»¿#include "Injector.h"
 #include <iostream>
 
 
@@ -9,11 +9,11 @@ bool ManualInjector::InjectAndExecute(Process& proc, const std::vector<unsigned 
 	if (!proc.IsAttached() || !proc.IsAlive() || shellCode.empty()) return false;
 
 
-	//Œã‚É‚±‚ê‚ÍWindowsAPI‚Ì‘ã‚í‚è‚É”é“½«‚Ì‚‚¢ˆ—‚É•Ï‚¦‚é
+	//å¾Œã«ã“ã‚Œã¯WindowsAPIã®ä»£ã‚ã‚Šã«ç§˜åŒ¿æ€§ã®é«˜ã„å‡¦ç†ã«å¤‰ãˆã‚‹
 	
 
-	//STEP 1: ƒ^[ƒQƒbƒgƒvƒƒZƒX“à‚Éu‹ó‚«’nv‚ðŠm•Û
-	// PAGE_EXECUTE_READWRITE ‚ðŽw’è‚·‚é‚±‚Æ‚ÅA‘‚¢‚½ƒR[ƒh‚ðŽÀs‰Â”\‚É‚·‚é
+	//STEP 1: ã‚¿ãƒ¼ã‚²ãƒƒãƒˆãƒ—ãƒ­ã‚»ã‚¹å†…ã«ã€Œç©ºãåœ°ã€ã‚’ç¢ºä¿
+	// PAGE_EXECUTE_READWRITE ã‚’æŒ‡å®šã™ã‚‹ã“ã¨ã§ã€æ›¸ã„ãŸã‚³ãƒ¼ãƒ‰ã‚’å®Ÿè¡Œå¯èƒ½ã«ã™ã‚‹
 	void* remoteMem = VirtualAllocEx(
 		proc.hProcess,
 		nullptr,
@@ -27,7 +27,7 @@ bool ManualInjector::InjectAndExecute(Process& proc, const std::vector<unsigned 
 		return false;
 	}
 
-	//STEP 2: Šm•Û‚µ‚½êŠ‚ÉƒoƒCƒiƒŠi‹@ŠBŒêj‚ð‘‚«ž‚Þ
+	//STEP 2: ç¢ºä¿ã—ãŸå ´æ‰€ã«ãƒã‚¤ãƒŠãƒªï¼ˆæ©Ÿæ¢°èªžï¼‰ã‚’æ›¸ãè¾¼ã‚€
 	SIZE_T bytesWritten = 0;
 	if (!WriteProcessMemory(
 		proc.hProcess,
@@ -40,8 +40,8 @@ bool ManualInjector::InjectAndExecute(Process& proc, const std::vector<unsigned 
 		VirtualFreeEx(proc.hProcess, remoteMem, 0, MEM_RELEASE);
 		return false;
 	}
-	//STEP 3: ‰“Šu‚ÅƒXƒŒƒbƒh‚ðì¬‚µAŽÀsƒXƒCƒbƒ`‚ð“ü‚ê‚é ---
-	// ƒ^[ƒQƒbƒgƒvƒƒZƒX‚Ì CPU ‚É‘Î‚µuremoteMem ‚ÌZŠ‚©‚çˆ—‚ðŽn‚ß‚ÄIv‚Æ–½—ß‚·‚é
+	//STEP 3: é éš”ã§ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’ä½œæˆã—ã€å®Ÿè¡Œã‚¹ã‚¤ãƒƒãƒã‚’å…¥ã‚Œã‚‹ ---
+	// ã‚¿ãƒ¼ã‚²ãƒƒãƒˆãƒ—ãƒ­ã‚»ã‚¹ã® CPU ã«å¯¾ã—ã€ŒremoteMem ã®ä½æ‰€ã‹ã‚‰å‡¦ç†ã‚’å§‹ã‚ã¦ï¼ã€ã¨å‘½ä»¤ã™ã‚‹
 
 
 	HANDLE hThread = CreateRemoteThread(
@@ -69,7 +69,7 @@ bool ManualInjector::InjectAndExecute(Process& proc, const std::vector<unsigned 
 bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 {
 	std::cout << "[*] Loading DLL: " << dllPath << std::endl;
-	// 1. DLLƒtƒ@ƒCƒ‹‚ðƒoƒCƒiƒŠ‚Æ‚µ‚Ä“Ç‚Ýž‚Þ
+	// 1. DLLãƒ•ã‚¡ã‚¤ãƒ«ã‚’ãƒã‚¤ãƒŠãƒªã¨ã—ã¦èª­ã¿è¾¼ã‚€
 	std::ifstream file(dllPath, std::ios::binary | std::ios::ate);//ate mode
 	if (file.fail()) return false;
 
@@ -79,15 +79,15 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 	file.read((char*)rawData.data(), fileSize);
 	file.close();
 
-	// 2. PEƒwƒbƒ_[‚ÌŠm”Fi‚±‚ê‚ª³‚µ‚¢DLLƒtƒ@ƒCƒ‹‚©ƒ`ƒFƒbƒNj
+	// 2. PEãƒ˜ãƒƒãƒ€ãƒ¼ã®ç¢ºèªï¼ˆã“ã‚ŒãŒæ­£ã—ã„DLLãƒ•ã‚¡ã‚¤ãƒ«ã‹ãƒã‚§ãƒƒã‚¯ï¼‰
 	auto* dosHeader = (PIMAGE_DOS_HEADER)rawData.data();
 	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE) return false;
 
 	auto* ntHeader = (PIMAGE_NT_HEADERS)(rawData.data() + dosHeader->e_lfanew);
 	if (ntHeader->Signature != IMAGE_NT_SIGNATURE) return false;
 
-	// 3. ƒ^[ƒQƒbƒgƒvƒƒZƒX“à‚Éƒƒ‚ƒŠ‚ðŠm•Û
-	// DLL‚ª—v‹‚·‚éƒTƒCƒY•ªiSizeOfImagej‚ðŠm•Û‚·‚é
+	// 3. ã‚¿ãƒ¼ã‚²ãƒƒãƒˆãƒ—ãƒ­ã‚»ã‚¹å†…ã«ãƒ¡ãƒ¢ãƒªã‚’ç¢ºä¿
+	// DLLãŒè¦æ±‚ã™ã‚‹ã‚µã‚¤ã‚ºåˆ†ï¼ˆSizeOfImageï¼‰ã‚’ç¢ºä¿ã™ã‚‹
 	void* targetBase = VirtualAllocEx(proc.hProcess, nullptr,
 		ntHeader->OptionalHeader.SizeOfImage, 
 		MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -104,9 +104,9 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 	}
 
 
-	// --- ‚±‚±‚©‚çæ‚Ìˆ—iÄ”z’u‚âƒCƒ“ƒ|[ƒg‰ðŒˆj‚Í‚³‚ç‚É•¡ŽG‚É‚È‚è‚Ü‚· ---
-	// 4. ƒZƒNƒVƒ‡ƒ“‚ÌƒRƒs[
-	// NTƒwƒbƒ_[‚Ì‚·‚®Œã‚ë‚É‚ ‚éuƒZƒNƒVƒ‡ƒ“ƒwƒbƒ_[i–ÚŽŸjv‚Ìæ“ª‚ðŽæ“¾
+	// --- ã“ã“ã‹ã‚‰å…ˆã®å‡¦ç†ï¼ˆå†é…ç½®ã‚„ã‚¤ãƒ³ãƒãƒ¼ãƒˆè§£æ±ºï¼‰ã¯ã•ã‚‰ã«è¤‡é›‘ã«ãªã‚Šã¾ã™ ---
+	// 4. ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã®ã‚³ãƒ”ãƒ¼
+	// NTãƒ˜ãƒƒãƒ€ãƒ¼ã®ã™ãå¾Œã‚ã«ã‚ã‚‹ã€Œã‚»ã‚¯ã‚·ãƒ§ãƒ³ãƒ˜ãƒƒãƒ€ãƒ¼ï¼ˆç›®æ¬¡ï¼‰ã€ã®å…ˆé ­ã‚’å–å¾—
 	PIMAGE_SECTION_HEADER pSectionHeader = IMAGE_FIRST_SECTION(ntHeader);
 	for (UINT i = 0; i < ntHeader->FileHeader.NumberOfSections; ++i) {
 		if (pSectionHeader[i].SizeOfRawData > 0) {
@@ -121,14 +121,14 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 			}
 		}
 	}
-	// --- ƒXƒeƒbƒv5: ŽwŽ¦‘‚Ì€”õ ---
+	// --- ã‚¹ãƒ†ãƒƒãƒ—5: æŒ‡ç¤ºæ›¸ã®æº–å‚™ ---
 	MANUAL_MAPPING_DATA data{ 0 };
 
-	// 1. Šî–{“I‚ÈŠÖ”‚ÌZŠi‚±‚ê‚ç‚Í injector.exe ‚Å‚à“¯‚¶êŠ‚É‚ ‚é‚Ì‚Å’¼Ú‘ã“üOKj
+	// 1. åŸºæœ¬çš„ãªé–¢æ•°ã®ä½æ‰€ï¼ˆã“ã‚Œã‚‰ã¯ injector.exe ã§ã‚‚åŒã˜å ´æ‰€ã«ã‚ã‚‹ã®ã§ç›´æŽ¥ä»£å…¥OKï¼‰
 	data.pLoadLibraryA = LoadLibraryA;
 	data.pGetProcAddress = GetProcAddress;
 
-	// 2. 64bit“Á—L‚Ì—áŠOˆ—ŠÖ”‚ÌZŠ‚ðŽæ“¾
+	// 2. 64bitç‰¹æœ‰ã®ä¾‹å¤–å‡¦ç†é–¢æ•°ã®ä½æ‰€ã‚’å–å¾—
 #ifdef _WIN64
 	HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
 	if (hKernel32) {
@@ -136,48 +136,38 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 	}
 #endif
 
-	// 3. ƒpƒ‰ƒ[ƒ^‚ÌƒZƒbƒg
+	// 3. ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã®ã‚»ãƒƒãƒˆ
 	data.pbase = (BYTE*)targetBase;
 	data.fdwReasonParam = DLL_PROCESS_ATTACH;
 	data.reservedParam = nullptr;
-	data.SEHSupport = TRUE; // ‚±‚ê‚ð TRUE ‚É‚·‚é‚±‚Æ‚ÅƒVƒFƒ‹ƒR[ƒh‘¤‚Å SEH ‚ª“o˜^‚³‚ê‚é
-	data.hMod = NULL; // ¬Œ÷•ñ‚ð‘Ò‚Â‚½‚ß‚É NULL ‚Å‰Šú‰»
+	data.SEHSupport = TRUE; // ã“ã‚Œã‚’ TRUE ã«ã™ã‚‹ã“ã¨ã§ã‚·ã‚§ãƒ«ã‚³ãƒ¼ãƒ‰å´ã§ SEH ãŒç™»éŒ²ã•ã‚Œã‚‹
+	data.hMod = NULL; // æˆåŠŸå ±å‘Šã‚’å¾…ã¤ãŸã‚ã« NULL ã§åˆæœŸåŒ–
 	//data.originalRip = originalRip;
 
-	// ƒ^[ƒQƒbƒgƒvƒƒZƒX“à‚É\‘¢‘Ì—p‚Ìƒƒ‚ƒŠ‚ðŠm•Û
+	// ã‚¿ãƒ¼ã‚²ãƒƒãƒˆãƒ—ãƒ­ã‚»ã‚¹å†…ã«æ§‹é€ ä½“ç”¨ã®ãƒ¡ãƒ¢ãƒªã‚’ç¢ºä¿
 	void* pMappingDataAlloc = VirtualAllocEx(proc.hProcess, nullptr, sizeof(MANUAL_MAPPING_DATA), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 	if (!pMappingDataAlloc) return false;
 
-	// ŽwŽ¦‘‚ð‘‚«ž‚Þ
+	// æŒ‡ç¤ºæ›¸ã‚’æ›¸ãè¾¼ã‚€
 	WriteProcessMemory(proc.hProcess, pMappingDataAlloc, &data, sizeof(MANUAL_MAPPING_DATA), nullptr);
 
 
-	// ‚·‚×‚Ä‚ÌƒZƒNƒVƒ‡ƒ“‚Æ PE ƒwƒbƒ_[‚ð‘‚«ž‚ÝI‚í‚Á‚½‚Ì‚ÅA
-	// targetBaseiDLL–{‘Ìj‚Ìƒƒ‚ƒŠ‘®«‚ð RW ‚©‚ç RX ‚É•ÏX‚µ‚ÄAŽÀs‰Â”\‚É‚·‚éB
-	/**DWORD oldProtect;
-	if (!VirtualProtectEx(proc.hProcess, targetBase,
-		ntHeader->OptionalHeader.SizeOfImage,
-		PAGE_EXECUTE_READ, &oldProtect)) {
-		std::cout << "[-] Failed to change Memory Protection!" << std::endl;
-		
-	}*/
-
-	// --- ƒXƒeƒbƒv6: ƒVƒFƒ‹ƒR[ƒh‚Ì“]‘—‚ÆŽÀs ---
-	// ƒVƒFƒ‹ƒR[ƒh—p‚Ìƒƒ‚ƒŠ‚ðŠm•ÛiŽÀsŒ ŒÀ PAGE_EXECUTE_READWRITE ‚ª•K{j
+	// --- ã‚¹ãƒ†ãƒƒãƒ—6: ã‚·ã‚§ãƒ«ã‚³ãƒ¼ãƒ‰ã®è»¢é€ã¨å®Ÿè¡Œ ---
+	// ã‚·ã‚§ãƒ«ã‚³ãƒ¼ãƒ‰ç”¨ã®ãƒ¡ãƒ¢ãƒªã‚’ç¢ºä¿ï¼ˆå®Ÿè¡Œæ¨©é™ PAGE_EXECUTE_READWRITE ãŒå¿…é ˆï¼‰
 	void* pShellCodeAlloc = VirtualAllocEx(proc.hProcess, nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!pShellCodeAlloc) return false;
 
-	// ŠÖ”‚ÌƒTƒCƒY‚ð³‚µ‚­ŒvŽZ‚µ‚Ä‘‚«ž‚Þ
+	// é–¢æ•°ã®ã‚µã‚¤ã‚ºã‚’æ­£ã—ãè¨ˆç®—ã—ã¦æ›¸ãè¾¼ã‚€
 	size_t codeSize = (uintptr_t)ShellCode_End - (uintptr_t)ShellCode;
 	if (codeSize <= 0 || codeSize > 0x1000) codeSize = 0x1000;
 
-	//’è‹`‚µ‚½Shellcode ŠÖ”‚ðƒ^[ƒQƒbƒg‚É‘‚«ž‚Þ. ShellcodeŠÖ”‚ð‚»‚Ì‚Ü‚ÜƒRƒs[‚µ‚Ä‘—‚èž‚Þ
+	//å®šç¾©ã—ãŸShellcode é–¢æ•°ã‚’ã‚¿ãƒ¼ã‚²ãƒƒãƒˆã«æ›¸ãè¾¼ã‚€. Shellcodeé–¢æ•°ã‚’ãã®ã¾ã¾ã‚³ãƒ”ãƒ¼ã—ã¦é€ã‚Šè¾¼ã‚€
 	WriteProcessMemory(proc.hProcess, pShellCodeAlloc, (void*)ShellCode, codeSize, nullptr);
 
-	// ‰“ŠuƒXƒŒƒbƒh‚ðì¬‚µ‚ÄAƒVƒFƒ‹ƒR[ƒh‚ð‹N“®I
-	// pMappingDataAllociŽwŽ¦‘‚ÌZŠj‚ðˆø”‚Æ‚µ‚Ä“n‚·
+	// é éš”ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’ä½œæˆã—ã¦ã€ã‚·ã‚§ãƒ«ã‚³ãƒ¼ãƒ‰ã‚’èµ·å‹•ï¼
+	// pMappingDataAllocï¼ˆæŒ‡ç¤ºæ›¸ã®ä½æ‰€ï¼‰ã‚’å¼•æ•°ã¨ã—ã¦æ¸¡ã™
 
-	//ŽŸ‚ÉŽÀs‚·‚éêŠ‚ðAƒVƒFƒ‹ƒR[ƒh‚ÌZŠ‚É‘‚«Š·‚¦‚é
+	//æ¬¡ã«å®Ÿè¡Œã™ã‚‹å ´æ‰€ã‚’ã€ã‚·ã‚§ãƒ«ã‚³ãƒ¼ãƒ‰ã®ä½æ‰€ã«æ›¸ãæ›ãˆã‚‹
 	
 	//Thread
 	std::cout << "[*] Thread..." << std::endl;
@@ -191,7 +181,7 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 	////
 
 	HINSTANCE hCheck = NULL;
-	const int timeoutMs = 10000; // 10•b‘Ò‚Á‚Äƒ_ƒ‚È‚ç’ú‚ß‚é
+	const int timeoutMs = 10000; // 10ç§’å¾…ã£ã¦ãƒ€ãƒ¡ãªã‚‰è«¦ã‚ã‚‹
 	int elapsed = 0;
 
 	while (elapsed < timeoutMs) {
@@ -199,15 +189,15 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 		if (ReadProcessMemory(proc.hProcess, pMappingDataAlloc, &data_checked, sizeof(data_checked), nullptr)) {
 			hCheck = data_checked.hMod;
 
-			// y‚±‚±‚ð’Ç‰ÁzŒ»Ý‚Ì hMod ‚Ì’l‚ð•\Ž¦‚µ‚ÄA‚Ç‚±‚ÅŽ~‚Ü‚Á‚½‚©‰ÂŽ‹‰»‚·‚é
+			// ã€ã“ã“ã‚’è¿½åŠ ã€‘ç¾åœ¨ã® hMod ã®å€¤ã‚’è¡¨ç¤ºã—ã¦ã€ã©ã“ã§æ­¢ã¾ã£ãŸã‹å¯è¦–åŒ–ã™ã‚‹
 			if (hCheck != (HINSTANCE)0x0) {
 				printf("\r[*] ShellCode Status: 0x%p", (void*)hCheck);
 			}
 
-			if (hCheck == (HINSTANCE)targetBase) { // ZŠ‚ªŠ®‘S‚Éˆê’v‚µ‚½Žž‚¾‚¯¬Œ÷‚Æ‚Ý‚È‚·
+			if (hCheck == (HINSTANCE)targetBase) { // ä½æ‰€ãŒå®Œå…¨ã«ä¸€è‡´ã—ãŸæ™‚ã ã‘æˆåŠŸã¨ã¿ãªã™
 				printf("\n[+] Success! DLL Base: %p\n", hCheck);
 
-				// ƒXƒeƒ‹ƒXˆ—iƒwƒbƒ_[Á‹Žj
+				// ã‚¹ãƒ†ãƒ«ã‚¹å‡¦ç†ï¼ˆãƒ˜ãƒƒãƒ€ãƒ¼æ¶ˆåŽ»ï¼‰
 				DWORD old;
 				VirtualProtectEx(proc.hProcess, targetBase, 0x1000, PAGE_READWRITE, &old);
 				std::vector<uint8_t> zeroBuffer(0x1000, 0);
@@ -215,7 +205,7 @@ bool ManualInjector::ManualMap(Process& proc, const char* dllPath)
 
 				VirtualProtectEx(proc.hProcess, targetBase, ntHeader->OptionalHeader.SizeOfImage, PAGE_EXECUTE_READ, &old);
 
-				// ƒVƒFƒ‹ƒR[ƒh‚Éu•Ð•t‚¯‚µ‚Ä‚¢‚¢‚æv‚Æ‡}‚ð‘—‚é
+				// ã‚·ã‚§ãƒ«ã‚³ãƒ¼ãƒ‰ã«ã€Œç‰‡ä»˜ã‘ã—ã¦ã„ã„ã‚ˆã€ã¨åˆå›³ã‚’é€ã‚‹
 				data_checked.hMod = (HINSTANCE)0xDEADBEEF;
 				WriteProcessMemory(proc.hProcess, pMappingDataAlloc, &data_checked, sizeof(data_checked), nullptr);
 				break;
@@ -250,7 +240,7 @@ void ManualInjector::ReportError(const char* msg)
 void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
 	if (!pData) return;
 
-	// --- STEP 1: ‰Šú‰»ŠJŽn ---
+	// --- STEP 1: åˆæœŸåŒ–é–‹å§‹ ---
 	pData->hMod = (HINSTANCE)0x1;
 
 	BYTE* pBase = pData->pbase;
@@ -264,7 +254,7 @@ void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
 
 	typedef BOOL(WINAPI* f_DLL_ENTRY_POINT)(HINSTANCE, DWORD, LPVOID);
 
-	// 1. Ä”z’u (Relocation)
+	// 1. å†é…ç½® (Relocation)
 	pData->hMod = (HINSTANCE)0x2;
 	BYTE* LocationDelta = pBase - pOpt->ImageBase;
 	if (LocationDelta != 0) {
@@ -289,7 +279,7 @@ void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
 		}
 	}
 
-	// 2. ƒCƒ“ƒ|[ƒg‰ðŒˆ (Import Resolution)
+	// 2. ã‚¤ãƒ³ãƒãƒ¼ãƒˆè§£æ±º (Import Resolution)
 
 	pData->hMod = (HINSTANCE)0x3;
 	if (pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size) {
@@ -313,7 +303,7 @@ void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
 		}
 	}
 
-	// 3. TLSƒR[ƒ‹ƒoƒbƒN‚ÌŽÀs (‚±‚ê‚ª‚È‚¢‚Æ—Ž‚¿‚éDLL‚ª‘½‚¢)
+	// 3. TLSã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯ã®å®Ÿè¡Œ (ã“ã‚ŒãŒãªã„ã¨è½ã¡ã‚‹DLLãŒå¤šã„)
 	pData->hMod = (HINSTANCE)0x4;
 	if (pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].Size) {
 		auto* pTLS = (IMAGE_TLS_DIRECTORY*)(pBase + pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
@@ -322,7 +312,7 @@ void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
 			(*pCallback)(pBase, DLL_PROCESS_ATTACH, nullptr);
 	}
 
-	// 4. SEHi—áŠOˆ—j‚Ì“o˜^ (64bitŠÂ‹«‚Å•K{)
+	// 4. SEHï¼ˆä¾‹å¤–å‡¦ç†ï¼‰ã®ç™»éŒ² (64bitç’°å¢ƒã§å¿…é ˆ)
 #ifdef _WIN64
 	if (pData->SEHSupport) {
 		auto excep = pOpt->DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
@@ -334,20 +324,20 @@ void __stdcall ShellCode(MANUAL_MAPPING_DATA* pData) {
 	}
 #endif
 
-	// 5. DllMain‚ÌŒÄ‚Ño‚µ
+	// 5. DllMainã®å‘¼ã³å‡ºã—
 	pData->hMod = (HINSTANCE)0x5;
 
-	// Œ^‚ð–¾Ž¦“I‚ÉƒLƒƒƒXƒg‚µ‚ÄŒÄ‚Ño‚·
+	// åž‹ã‚’æ˜Žç¤ºçš„ã«ã‚­ãƒ£ã‚¹ãƒˆã—ã¦å‘¼ã³å‡ºã™
 	f_DLL_ENTRY_POINT _RealDllMain = (f_DLL_ENTRY_POINT)(pBase + pOpt->AddressOfEntryPoint);
 	_RealDllMain((HINSTANCE)pBase, pData->fdwReasonParam, pData->reservedParam);
 
 
-	// ŒÄ‚Ño‚µ‚ªI‚í‚Á‚½‚ç¬Œ÷•ñ
+	// å‘¼ã³å‡ºã—ãŒçµ‚ã‚ã£ãŸã‚‰æˆåŠŸå ±å‘Š
 	pData->hMod = (HINSTANCE)pBase;
 
 	while (pData->hMod != (HINSTANCE)0xDEADBEEF) {
-		// ƒXƒŠ[ƒv‘ã‚í‚è‚Ì‹óƒ‹[ƒvBŽÀÛ‚Í Sleep ‚ðƒCƒ“ƒ|[ƒg‚µ‚ÄŒÄ‚Ô‚Ì‚ªƒxƒXƒg
+		// ã‚¹ãƒªãƒ¼ãƒ—ä»£ã‚ã‚Šã®ç©ºãƒ«ãƒ¼ãƒ—ã€‚å®Ÿéš›ã¯ Sleep ã‚’ã‚¤ãƒ³ãƒãƒ¼ãƒˆã—ã¦å‘¼ã¶ã®ãŒãƒ™ã‚¹ãƒˆ
 	}
 }
-// ShellCode ‚ÌI‚í‚è‚ðƒ}[ƒN‚·‚éƒ_ƒ~[ŠÖ”
+// ShellCode ã®çµ‚ã‚ã‚Šã‚’ãƒžãƒ¼ã‚¯ã™ã‚‹ãƒ€ãƒŸãƒ¼é–¢æ•°
 void __stdcall ShellCode_End() {}
